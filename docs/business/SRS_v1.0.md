@@ -14668,6 +14668,7 @@ Repository	WorkforceIQ Project Repository
 
 This section marks the end of the WorkforceIQ Version 1.0 Software Requirements Specification.
 
+
 The next project activities shall use the approved SRS as the software-requirements baseline for detailed technical design, implementation planning, development, testing, and deployment.
 
 No additional functional requirements shall be assumed beyond this baseline unless introduced through the controlled change-management process.
