@@ -1,3 +1,5 @@
+from datetime import datetime, timezone
+
 from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy.orm import Session
 
@@ -21,6 +23,12 @@ from app.schemas.project import (
     ProjectCreate,
     ProjectResponse,
     ProjectUpdate,
+)
+
+from app.schemas.recommendation import (
+    RecommendationItem,
+    RecommendationRequest,
+    RecommendationResponse,
 )
 
 from app.schemas.staffing_requirement import (
@@ -54,6 +62,10 @@ from app.services.project_service import (
     get_projects,
     search_projects,
     update_project,
+)
+
+from app.services.recommendation_service import (
+    generate_recommendations,
 )
 
 from app.services.staffing_service import (
@@ -503,6 +515,101 @@ def update_existing_staffing_requirement(
     db.refresh(requirement)
 
     return requirement
+
+
+# ============================================================
+# Recommendation APIs
+# ============================================================
+
+
+@api_router.post(
+    "/recommendations",
+    response_model=RecommendationResponse,
+)
+def generate_staffing_recommendations(
+    recommendation_request: RecommendationRequest,
+    db: Session = Depends(get_db),
+):
+    try:
+        recommendations = generate_recommendations(
+            db,
+            recommendation_request.staffing_requirement_id,
+        )
+
+    except ValueError as exc:
+        if str(exc) == "Staffing requirement not found":
+            raise HTTPException(
+                status_code=status.HTTP_404_NOT_FOUND,
+                detail=str(exc),
+            )
+
+        raise HTTPException(
+            status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+            detail=str(exc),
+        )
+
+    generated_at = (
+        recommendations[0].generated_at
+        if recommendations
+        else datetime.now(timezone.utc)
+    )
+
+    response_items = []
+
+    for recommendation in recommendations:
+        employee = recommendation.employee
+
+        matched_skills = []
+
+        if employee is not None:
+            reason = recommendation.recommendation_reason or ""
+
+            if reason.startswith("Matched skills: "):
+                matched_section = reason.split(
+                    ". ",
+                    1,
+                )[0]
+
+                matched_text = matched_section[
+                    len("Matched skills: "):
+                ]
+
+                if matched_text:
+                    matched_skills = [
+                        skill.strip()
+                        for skill in matched_text.split(",")
+                    ]
+
+            response_items.append(
+                RecommendationItem(
+                    employee_id=(
+                        recommendation.employee_id
+                    ),
+                    rank=recommendation.rank,
+                    score=recommendation.score,
+                    eligibility_status=(
+                        recommendation.eligibility_status
+                    ),
+                    matched_skills=matched_skills,
+                    reason=(
+                        recommendation.recommendation_reason
+                        or ""
+                    ),
+                )
+            )
+
+    return RecommendationResponse(
+        staffing_requirement_id=(
+            recommendation_request.staffing_requirement_id
+        ),
+        recommendations=response_items,
+        generated_at=generated_at,
+        message=(
+            "Recommendations generated successfully."
+            if response_items
+            else "No eligible employees found."
+        ),
+    )
 
 
 # ============================================================

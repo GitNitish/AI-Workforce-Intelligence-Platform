@@ -29,6 +29,12 @@ class StaffingRequirementBase(BaseModel):
         default="open",
         max_length=50,
     )
+    required_skill_ids: list[str] = Field(
+        default_factory=list,
+    )
+    required_certifications: list[str] = Field(
+        default_factory=list,
+    )
 
     @model_validator(mode="after")
     def validate_date_range(self):
@@ -76,6 +82,8 @@ class StaffingRequirementUpdate(BaseModel):
         default=None,
         max_length=50,
     )
+    required_skill_ids: list[str] | None = None
+    required_certifications: list[str] | None = None
 
     @model_validator(mode="after")
     def validate_date_range(self):

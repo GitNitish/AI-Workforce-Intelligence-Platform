@@ -120,6 +120,12 @@ class Skill(Base):
         back_populates="skill",
         cascade="all, delete-orphan",
     )
+    staffing_requirements: Mapped[
+        list["StaffingRequirementSkill"]
+    ] = relationship(
+        back_populates="skill",
+        cascade="all, delete-orphan",
+    )
 
 
 class EmployeeSkill(Base):
@@ -364,6 +370,18 @@ class StaffingRequirement(Base):
     recommendations: Mapped[list["Recommendation"]] = relationship(
         back_populates="staffing_requirement"
     )
+    required_skills: Mapped[
+        list["StaffingRequirementSkill"]
+    ] = relationship(
+        back_populates="staffing_requirement",
+        cascade="all, delete-orphan",
+    )
+    required_certifications: Mapped[
+        list["StaffingRequirementCertification"]
+    ] = relationship(
+        back_populates="staffing_requirement",
+        cascade="all, delete-orphan",
+    )
 
     __table_args__ = (
         CheckConstraint(
@@ -378,6 +396,80 @@ class StaffingRequirement(Base):
             "end_date IS NULL OR start_date IS NULL "
             "OR end_date >= start_date",
             name="ck_staffing_date_range",
+        ),
+    )
+
+
+class StaffingRequirementSkill(Base):
+    __tablename__ = "staffing_requirement_skills"
+
+    staffing_requirement_skill_id: Mapped[str] = mapped_column(
+        String(36),
+        primary_key=True,
+        default=generate_id,
+    )
+    staffing_requirement_id: Mapped[str] = mapped_column(
+        ForeignKey(
+            "staffing_requirements.staffing_requirement_id"
+        ),
+        nullable=False,
+        index=True,
+    )
+    skill_id: Mapped[str] = mapped_column(
+        ForeignKey("skills.skill_id"),
+        nullable=False,
+        index=True,
+    )
+
+    staffing_requirement: Mapped[
+        "StaffingRequirement"
+    ] = relationship(
+        back_populates="required_skills"
+    )
+    skill: Mapped["Skill"] = relationship(
+        back_populates="staffing_requirements"
+    )
+
+    __table_args__ = (
+        UniqueConstraint(
+            "staffing_requirement_id",
+            "skill_id",
+            name="uq_staffing_requirement_skill",
+        ),
+    )
+
+
+class StaffingRequirementCertification(Base):
+    __tablename__ = "staffing_requirement_certifications"
+
+    staffing_requirement_certification_id: Mapped[str] = mapped_column(
+        String(36),
+        primary_key=True,
+        default=generate_id,
+    )
+    staffing_requirement_id: Mapped[str] = mapped_column(
+        ForeignKey(
+            "staffing_requirements.staffing_requirement_id"
+        ),
+        nullable=False,
+        index=True,
+    )
+    certification_name: Mapped[str] = mapped_column(
+        String(150),
+        nullable=False,
+    )
+
+    staffing_requirement: Mapped[
+        "StaffingRequirement"
+    ] = relationship(
+        back_populates="required_certifications"
+    )
+
+    __table_args__ = (
+        UniqueConstraint(
+            "staffing_requirement_id",
+            "certification_name",
+            name="uq_staffing_requirement_certification",
         ),
     )
 

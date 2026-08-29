@@ -1,0 +1,23 @@
+"""
+Recommendation scoring configuration for Sprint 4.
+
+The total recommendation score is 100 points.
+Eligibility is evaluated separately before scoring.
+"""
+
+SKILL_MATCH_WEIGHT = 30
+PROFICIENCY_WEIGHT = 20
+EXPERIENCE_WEIGHT = 20
+CERTIFICATION_WEIGHT = 10
+AVAILABILITY_WEIGHT = 10
+UTILIZATION_WEIGHT = 10
+
+
+TOTAL_SCORE_WEIGHT = (
+    SKILL_MATCH_WEIGHT
+    + PROFICIENCY_WEIGHT
+    + EXPERIENCE_WEIGHT
+    + CERTIFICATION_WEIGHT
+    + AVAILABILITY_WEIGHT
+    + UTILIZATION_WEIGHT
+)
