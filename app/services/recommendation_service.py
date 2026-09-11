@@ -1,6 +1,6 @@
 from datetime import datetime, timezone
 
-from sqlalchemy import delete, select
+from sqlalchemy import delete
 from sqlalchemy.orm import Session
 
 from app.ai.eligibility import (
@@ -21,6 +21,9 @@ from app.models.entities import (
     Employee,
     Recommendation,
     StaffingRequirement,
+)
+from app.services.candidate_matching_service import (
+    discover_candidate_employees,
 )
 
 
@@ -186,8 +189,11 @@ def generate_recommendations(
     Generate and persist ranked recommendations for a
     staffing requirement.
 
-    Only employees that pass mandatory eligibility checks
-    are scored and ranked.
+    Candidate discovery first narrows the employee pool
+    using active status and required-skill ownership.
+
+    Mandatory eligibility checks then determine which
+    discovered candidates can actually be recommended.
 
     Capacity and utilization are calculated from actual
     active allocations overlapping the staffing requirement
@@ -223,18 +229,6 @@ def generate_recommendations(
     db.flush()
 
     # --------------------------------------------------------
-    # Load employees deterministically
-    # --------------------------------------------------------
-
-    employees = list(
-        db.scalars(
-            select(Employee).order_by(
-                Employee.name.asc()
-            )
-        ).all()
-    )
-
-    # --------------------------------------------------------
     # Build requirement criteria
     # --------------------------------------------------------
 
@@ -251,6 +245,23 @@ def generate_recommendations(
         for required_certification
         in requirement.required_certifications
     }
+
+    # --------------------------------------------------------
+    # Discover candidate employees
+    #
+    # Candidate discovery intentionally handles only the
+    # initial candidate pool:
+    # - active employees
+    # - all required skills when skills are specified
+    #
+    # Mandatory eligibility remains the responsibility of
+    # the existing eligibility engine.
+    # --------------------------------------------------------
+
+    employees = discover_candidate_employees(
+        db,
+        requirement,
+    )
 
     # --------------------------------------------------------
     # Evaluate and score eligible employees
