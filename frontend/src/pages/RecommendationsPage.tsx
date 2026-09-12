@@ -1,4 +1,5 @@
 import { useState } from 'react'
+import { useSearchParams } from 'react-router-dom'
 import type {
   RecommendationResponse,
   RecommendationItem,
@@ -9,8 +10,11 @@ const VERIFIED_STAFFING_REQUIREMENT_ID =
   '5d3a37fc-cccf-4e24-bae2-d2fb6c175e23'
 
 function RecommendationsPage() {
+  const [searchParams] = useSearchParams()
+  const requirementIdFromUrl = searchParams.get('requirementId')
+
   const [staffingRequirementId, setStaffingRequirementId] = useState(
-    VERIFIED_STAFFING_REQUIREMENT_ID,
+    requirementIdFromUrl ?? VERIFIED_STAFFING_REQUIREMENT_ID,
   )
   const [result, setResult] = useState<RecommendationResponse | null>(null)
   const [loading, setLoading] = useState(false)

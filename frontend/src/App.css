@@ -203,6 +203,204 @@
   line-height: 1.6;
 }
 
+/* Shared page states */
+
+.loading-message,
+.empty-message,
+.error-message {
+  margin-top: 20px;
+  padding: 14px 16px;
+  border-radius: 8px;
+  font-size: 14px;
+}
+
+.loading-message {
+  background: #ffffff;
+  border: 1px solid #e5e7eb;
+  color: #6b7280;
+}
+
+.empty-message {
+  background: #ffffff;
+  border: 1px solid #e5e7eb;
+  color: #6b7280;
+}
+
+.error-message {
+  background: #fef2f2;
+  border: 1px solid #fecaca;
+  color: #b91c1c;
+}
+
+/* Recommendation workflow */
+
+.recommendation-form {
+  margin-top: 24px;
+  padding: 20px;
+  display: grid;
+  grid-template-columns: auto minmax(280px, 1fr) auto;
+  align-items: end;
+  gap: 12px;
+  background: #ffffff;
+  border: 1px solid #e5e7eb;
+  border-radius: 10px;
+}
+
+.recommendation-form label {
+  padding-bottom: 9px;
+  color: #374151;
+  font-size: 13px;
+  font-weight: 600;
+}
+
+.recommendation-form input {
+  min-width: 0;
+  height: 40px;
+  box-sizing: border-box;
+  padding: 0 12px;
+  border: 1px solid #d1d5db;
+  border-radius: 7px;
+  background: #ffffff;
+  color: #172033;
+  font: inherit;
+  font-size: 13px;
+}
+
+.recommendation-form input:focus {
+  outline: 2px solid #bfdbfe;
+  border-color: #2563eb;
+}
+
+.recommendation-form button {
+  height: 40px;
+  padding: 0 18px;
+  border: 0;
+  border-radius: 7px;
+  background: #2563eb;
+  color: #ffffff;
+  font: inherit;
+  font-size: 13px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: background-color 0.15s ease;
+}
+
+.recommendation-form button:hover:not(:disabled) {
+  background: #1d4ed8;
+}
+
+.recommendation-form button:disabled {
+  background: #93c5fd;
+  cursor: not-allowed;
+}
+
+.recommendation-results {
+  margin-top: 24px;
+}
+
+.results-summary {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 12px;
+}
+
+.results-summary > div {
+  min-width: 0;
+  padding: 16px;
+  background: #ffffff;
+  border: 1px solid #e5e7eb;
+  border-radius: 9px;
+}
+
+.results-summary span {
+  display: block;
+  margin-bottom: 6px;
+  color: #6b7280;
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: 0.3px;
+  text-transform: uppercase;
+}
+
+.results-summary strong {
+  display: block;
+  color: #172033;
+  font-size: 14px;
+  line-height: 1.5;
+  overflow-wrap: anywhere;
+}
+
+.recommendation-list {
+  margin-top: 16px;
+  display: grid;
+  gap: 12px;
+}
+
+.recommendation-card {
+  display: grid;
+  grid-template-columns: 52px minmax(0, 1fr);
+  gap: 16px;
+  padding: 20px;
+  background: #ffffff;
+  border: 1px solid #e5e7eb;
+  border-radius: 10px;
+}
+
+.recommendation-rank {
+  width: 40px;
+  height: 40px;
+  display: grid;
+  place-items: center;
+  border-radius: 8px;
+  background: #eff6ff;
+  color: #1d4ed8;
+  font-size: 13px;
+  font-weight: 700;
+}
+
+.recommendation-content {
+  min-width: 0;
+}
+
+.recommendation-title {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  margin-bottom: 12px;
+}
+
+.recommendation-title h3 {
+  margin: 0;
+  color: #111827;
+  font-size: 17px;
+  line-height: 1.4;
+  overflow-wrap: anywhere;
+}
+
+.recommendation-score {
+  flex-shrink: 0;
+  padding: 5px 9px;
+  border-radius: 6px;
+  background: #f3f4f6;
+  color: #374151;
+  font-size: 12px;
+  font-weight: 700;
+}
+
+.recommendation-content p {
+  margin-top: 8px;
+  color: #4b5563;
+  font-size: 13px;
+  line-height: 1.6;
+}
+
+.recommendation-content strong {
+  color: #374151;
+}
+
+/* Responsive layout */
+
 @media (max-width: 800px) {
   .sidebar {
     width: 210px;
@@ -214,6 +412,19 @@
 
   .topbar {
     padding: 0 20px;
+  }
+
+  .recommendation-form {
+    grid-template-columns: 1fr;
+    align-items: stretch;
+  }
+
+  .recommendation-form label {
+    padding-bottom: 0;
+  }
+
+  .results-summary {
+    grid-template-columns: 1fr;
   }
 }
 
@@ -258,5 +469,14 @@
 
   .content {
     padding: 20px;
+  }
+
+  .recommendation-card {
+    grid-template-columns: 1fr;
+  }
+
+  .recommendation-title {
+    align-items: flex-start;
+    flex-direction: column;
   }
 }
