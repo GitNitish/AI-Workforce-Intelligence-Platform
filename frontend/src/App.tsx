@@ -1,5 +1,6 @@
 import { BrowserRouter, Route, Routes } from 'react-router-dom'
 import AppLayout from './layouts/AppLayout'
+import AnalyticsPage from './pages/AnalyticsPage'
 import EmployeesPage from './pages/EmployeesPage'
 import HomePage from './pages/HomePage'
 import ProjectsPage from './pages/ProjectsPage'
@@ -12,10 +13,14 @@ function App() {
       <Routes>
         <Route element={<AppLayout />}>
           <Route path="/" element={<HomePage />} />
+          <Route path="/analytics" element={<AnalyticsPage />} />
           <Route path="/employees" element={<EmployeesPage />} />
           <Route path="/projects" element={<ProjectsPage />} />
           <Route path="/requirements" element={<RequirementsPage />} />
-          <Route path="/recommendations" element={<RecommendationsPage />} />
+          <Route
+            path="/recommendations"
+            element={<RecommendationsPage />}
+          />
         </Route>
       </Routes>
     </BrowserRouter>

@@ -3,6 +3,7 @@ import '../App.css'
 
 const navigationItems = [
   { to: '/', label: 'Home', icon: '⌂' },
+  { to: '/analytics', label: 'Analytics', icon: '▥' },
   { to: '/employees', label: 'Employees', icon: '◉' },
   { to: '/projects', label: 'Projects', icon: '▣' },
   { to: '/requirements', label: 'Requirements', icon: '▤' },
@@ -17,7 +18,9 @@ function AppLayout() {
           <div className="brand-mark">W</div>
           <div>
             <div className="brand-name">WorkForceIQ</div>
-            <div className="brand-subtitle">Workforce Intelligence</div>
+            <div className="brand-subtitle">
+              Workforce Intelligence
+            </div>
           </div>
         </div>
 
@@ -45,7 +48,9 @@ function AppLayout() {
           <div className="status-dot" aria-hidden="true" />
           <div>
             <div className="system-status">Platform Online</div>
-            <div className="system-status-subtitle">AI services ready</div>
+            <div className="system-status-subtitle">
+              AI services ready
+            </div>
           </div>
         </div>
       </aside>
@@ -53,7 +58,9 @@ function AppLayout() {
       <div className="main-area">
         <header className="topbar">
           <div>
-            <span className="topbar-label">AI Workforce Intelligence Platform</span>
+            <span className="topbar-label">
+              AI Workforce Intelligence Platform
+            </span>
           </div>
 
           <div className="topbar-context">
