@@ -1,8 +1,13 @@
-import { useEffect, useMemo, useState } from 'react'
+import { useEffect, useState } from 'react'
+import { Link } from 'react-router-dom'
 import {
   getAnalyticsData,
   type AnalyticsData,
 } from '../services/analytics'
+
+function formatPercentage(value: number): string {
+  return `${value.toFixed(1)}%`
+}
 
 function AnalyticsPage() {
   const [data, setData] = useState<AnalyticsData | null>(null)
@@ -44,173 +49,13 @@ function AnalyticsPage() {
     }
   }, [])
 
-  const metrics = useMemo(() => {
-    if (!data) {
-      return null
-    }
-
-    const activeAllocations = data.allocations.filter(
-      (allocation) => allocation.status === 'active',
-    )
-
-    const activeAllocationByEmployee = new Map<string, number>()
-
-    for (const allocation of activeAllocations) {
-      const current =
-        activeAllocationByEmployee.get(allocation.employee_id) ?? 0
-
-      activeAllocationByEmployee.set(
-        allocation.employee_id,
-        current + allocation.allocation_percentage,
-      )
-    }
-
-    const employeeUtilizations = data.employees.map((employee) =>
-      Math.min(
-        activeAllocationByEmployee.get(employee.employee_id) ?? 0,
-        100,
-      ),
-    )
-
-    const totalEmployees = data.employees.length
-
-    const allocatedEmployees = employeeUtilizations.filter(
-      (utilization) => utilization > 0,
-    ).length
-
-    const benchEmployees = employeeUtilizations.filter(
-      (utilization) => utilization === 0,
-    ).length
-
-    const averageUtilization =
-      totalEmployees > 0
-        ? employeeUtilizations.reduce(
-            (total, utilization) => total + utilization,
-            0,
-          ) / totalEmployees
-        : 0
-
-    const totalCapacity = totalEmployees * 100
-
-    const allocatedCapacity = activeAllocations.reduce(
-      (total, allocation) =>
-        total + allocation.allocation_percentage,
-      0,
-    )
-
-    const availableCapacity = Math.max(
-      0,
-      totalCapacity - allocatedCapacity,
-    )
-
-    const openRequirements = data.staffingRequirements.filter(
-      (requirement) => requirement.status === 'open',
-    )
-
-    const openDemand = openRequirements.reduce(
-      (total, requirement) =>
-        total + requirement.required_quantity,
-      0,
-    )
-
-    const highPriorityDemand = openRequirements
-      .filter((requirement) => requirement.priority === 'high')
-      .reduce(
-        (total, requirement) =>
-          total + requirement.required_quantity,
-        0,
-      )
-
-    const mediumPriorityDemand = openRequirements
-      .filter((requirement) => requirement.priority === 'medium')
-      .reduce(
-        (total, requirement) =>
-          total + requirement.required_quantity,
-        0,
-      )
-
-    const lowPriorityDemand = openRequirements
-      .filter((requirement) => requirement.priority === 'low')
-      .reduce(
-        (total, requirement) =>
-          total + requirement.required_quantity,
-        0,
-      )
-
-    const allocationByProject = new Map<string, number>()
-
-    for (const allocation of activeAllocations) {
-      const current =
-        allocationByProject.get(allocation.project_id) ?? 0
-
-      allocationByProject.set(
-        allocation.project_id,
-        current + allocation.allocation_percentage,
-      )
-    }
-
-    const totalAllocatedCapacity = Array.from(
-      allocationByProject.values(),
-    ).reduce(
-      (total, percentage) => total + percentage,
-      0,
-    )
-
-    const allocationMix = data.projects
-      .map((project) => {
-        const allocatedPercentage =
-          allocationByProject.get(project.project_id) ?? 0
-
-        return {
-          projectId: project.project_id,
-          projectName: project.project_name,
-          percentage:
-            totalAllocatedCapacity > 0
-              ? (allocatedPercentage /
-                  totalAllocatedCapacity) *
-                100
-              : 0,
-        }
-      })
-      .filter((project) => project.percentage > 0)
-      .sort((a, b) => b.percentage - a.percentage)
-
-    const utilizationDistribution = {
-      available: employeeUtilizations.filter(
-        (utilization) => utilization === 0,
-      ).length,
-      partial: employeeUtilizations.filter(
-        (utilization) =>
-          utilization > 0 && utilization < 100,
-      ).length,
-      full: employeeUtilizations.filter(
-        (utilization) => utilization >= 100,
-      ).length,
-    }
-
-    return {
-      totalEmployees,
-      allocatedEmployees,
-      benchEmployees,
-      averageUtilization,
-      totalCapacity,
-      allocatedCapacity,
-      availableCapacity,
-      openRequirements: openRequirements.length,
-      openDemand,
-      highPriorityDemand,
-      mediumPriorityDemand,
-      lowPriorityDemand,
-      allocationMix,
-      utilizationDistribution,
-    }
-  }, [data])
-
   if (loading) {
     return (
       <section>
         <h2>Executive Analytics</h2>
-        <p>Workforce utilization, capacity and staffing insights.</p>
+        <p>
+          Workforce utilization, capacity and staffing insights.
+        </p>
 
         <div className="loading-message">
           Loading analytics...
@@ -223,7 +68,9 @@ function AnalyticsPage() {
     return (
       <section>
         <h2>Executive Analytics</h2>
-        <p>Workforce utilization, capacity and staffing insights.</p>
+        <p>
+          Workforce utilization, capacity and staffing insights.
+        </p>
 
         <div className="error-message">
           {error}
@@ -232,11 +79,13 @@ function AnalyticsPage() {
     )
   }
 
-  if (!data || !metrics) {
+  if (!data) {
     return (
       <section>
         <h2>Executive Analytics</h2>
-        <p>Workforce utilization, capacity and staffing insights.</p>
+        <p>
+          Workforce utilization, capacity and staffing insights.
+        </p>
 
         <div className="empty-message">
           No analytics data is available.
@@ -245,8 +94,122 @@ function AnalyticsPage() {
     )
   }
 
+  const {
+    utilization,
+    capacity,
+    employeeUtilization,
+  } = data
+
+  const totalEmployees = data.employees.length
+
+  const allocatedEmployees = employeeUtilization.filter(
+    (employee) => employee.utilizationPercentage > 0,
+  ).length
+
+  const openRequirements = data.staffingRequirements.filter(
+    (requirement) => requirement.status === 'open',
+  )
+
+  const openDemand = openRequirements.reduce(
+    (total, requirement) =>
+      total + requirement.required_quantity,
+    0,
+  )
+
+  const highPriorityDemand = openRequirements
+    .filter((requirement) => requirement.priority === 'high')
+    .reduce(
+      (total, requirement) =>
+        total + requirement.required_quantity,
+      0,
+    )
+
+  const mediumPriorityDemand = openRequirements
+    .filter((requirement) => requirement.priority === 'medium')
+    .reduce(
+      (total, requirement) =>
+        total + requirement.required_quantity,
+      0,
+    )
+
+  const lowPriorityDemand = openRequirements
+    .filter((requirement) => requirement.priority === 'low')
+    .reduce(
+      (total, requirement) =>
+        total + requirement.required_quantity,
+      0,
+    )
+
+  const activeAllocations = data.allocations.filter(
+    (allocation) => allocation.status === 'active',
+  )
+
+  const allocationByProject = new Map<string, number>()
+
+  for (const allocation of activeAllocations) {
+    const current =
+      allocationByProject.get(allocation.project_id) ?? 0
+
+    allocationByProject.set(
+      allocation.project_id,
+      current + allocation.allocation_percentage,
+    )
+  }
+
+  const totalAllocatedProjectCapacity = Array.from(
+    allocationByProject.values(),
+  ).reduce(
+    (total, percentage) => total + percentage,
+    0,
+  )
+
+  const allocationMix = data.projects
+    .map((project) => {
+      const allocatedPercentage =
+        allocationByProject.get(project.project_id) ?? 0
+
+      return {
+        projectId: project.project_id,
+        projectName: project.project_name,
+        percentage:
+          totalAllocatedProjectCapacity > 0
+            ? (allocatedPercentage /
+                totalAllocatedProjectCapacity) *
+              100
+            : 0,
+      }
+    })
+    .filter((project) => project.percentage > 0)
+    .sort(
+      (first, second) =>
+        second.percentage - first.percentage,
+    )
+
   const maxAllocationPercentage =
-    metrics.allocationMix[0]?.percentage ?? 1
+    allocationMix[0]?.percentage ?? 1
+
+  const distributionItems = [
+    {
+      label: 'Bench',
+      count: utilization.distribution.bench,
+    },
+    {
+      label: 'Low',
+      count: utilization.distribution.low,
+    },
+    {
+      label: 'Moderate',
+      count: utilization.distribution.moderate,
+    },
+    {
+      label: 'High',
+      count: utilization.distribution.high,
+    },
+    {
+      label: 'Fully Utilized',
+      count: utilization.distribution.fullyUtilized,
+    },
+  ]
 
   return (
     <section className="analytics-page">
@@ -262,39 +225,40 @@ function AnalyticsPage() {
       <div className="analytics-kpi-grid">
         <div className="analytics-kpi-card">
           <span>Total Workforce</span>
-          <strong>{metrics.totalEmployees}</strong>
+          <strong>{totalEmployees}</strong>
           <small>
-            {metrics.allocatedEmployees} currently allocated
+            {allocatedEmployees} currently allocated
           </small>
         </div>
 
         <div className="analytics-kpi-card">
           <span>Average Utilization</span>
           <strong>
-            {metrics.averageUtilization.toFixed(1)}%
+            {formatPercentage(
+              utilization.averageUtilization,
+            )}
           </strong>
-          <small>Across the current workforce</small>
+          <small>
+            Across the current workforce
+          </small>
         </div>
 
         <div className="analytics-kpi-card">
           <span>Bench</span>
-          <strong>{metrics.benchEmployees}</strong>
+          <strong>{utilization.benchEmployees}</strong>
           <small>
-            {metrics.totalEmployees > 0
-              ? `${(
-                  (metrics.benchEmployees /
-                    metrics.totalEmployees) *
-                  100
-                ).toFixed(1)}% of workforce`
-              : '0.0% of workforce'}
+            {formatPercentage(
+              utilization.benchPercentage,
+            )}{' '}
+            of workforce
           </small>
         </div>
 
         <div className="analytics-kpi-card">
           <span>Open Demand</span>
-          <strong>{metrics.openDemand}</strong>
+          <strong>{openDemand}</strong>
           <small>
-            {metrics.openRequirements} open requirements
+            {openRequirements.length} open requirements
           </small>
         </div>
       </div>
@@ -304,88 +268,43 @@ function AnalyticsPage() {
           <div className="analytics-panel-header">
             <div>
               <h3>Utilization Distribution</h3>
-              <p>Current workforce allocation levels.</p>
+              <p>
+                Current workforce allocation levels.
+              </p>
             </div>
           </div>
 
           <div className="analytics-bars">
-            <div className="analytics-bar-row">
-              <div className="analytics-bar-label">
-                <span>Available</span>
-                <strong>
-                  {metrics.utilizationDistribution.available}
-                </strong>
-              </div>
+            {distributionItems.map((item) => {
+              const percentage =
+                totalEmployees > 0
+                  ? (item.count / totalEmployees) * 100
+                  : 0
 
-              <div className="analytics-bar-track">
+              return (
                 <div
-                  className="analytics-bar-fill"
-                  style={{
-                    width:
-                      metrics.totalEmployees > 0
-                        ? `${
-                            (metrics.utilizationDistribution
-                              .available /
-                              metrics.totalEmployees) *
-                            100
-                          }%`
-                        : '0%',
-                  }}
-                />
-              </div>
-            </div>
+                  className="analytics-bar-row"
+                  key={item.label}
+                >
+                  <div className="analytics-bar-label">
+                    <span>{item.label}</span>
+                    <strong>
+                      {item.count} (
+                      {percentage.toFixed(1)}%)
+                    </strong>
+                  </div>
 
-            <div className="analytics-bar-row">
-              <div className="analytics-bar-label">
-                <span>Partially Utilized</span>
-                <strong>
-                  {metrics.utilizationDistribution.partial}
-                </strong>
-              </div>
-
-              <div className="analytics-bar-track">
-                <div
-                  className="analytics-bar-fill"
-                  style={{
-                    width:
-                      metrics.totalEmployees > 0
-                        ? `${
-                            (metrics.utilizationDistribution
-                              .partial /
-                              metrics.totalEmployees) *
-                            100
-                          }%`
-                        : '0%',
-                  }}
-                />
-              </div>
-            </div>
-
-            <div className="analytics-bar-row">
-              <div className="analytics-bar-label">
-                <span>Fully Utilized</span>
-                <strong>
-                  {metrics.utilizationDistribution.full}
-                </strong>
-              </div>
-
-              <div className="analytics-bar-track">
-                <div
-                  className="analytics-bar-fill"
-                  style={{
-                    width:
-                      metrics.totalEmployees > 0
-                        ? `${
-                            (metrics.utilizationDistribution
-                              .full /
-                              metrics.totalEmployees) *
-                            100
-                          }%`
-                        : '0%',
-                  }}
-                />
-              </div>
-            </div>
+                  <div className="analytics-bar-track">
+                    <div
+                      className="analytics-bar-fill"
+                      style={{
+                        width: `${percentage}%`,
+                      }}
+                    />
+                  </div>
+                </div>
+              )
+            })}
           </div>
         </div>
 
@@ -393,7 +312,9 @@ function AnalyticsPage() {
           <div className="analytics-panel-header">
             <div>
               <h3>Capacity & Bench</h3>
-              <p>Current workforce capacity allocation.</p>
+              <p>
+                Current workforce capacity allocation.
+              </p>
             </div>
           </div>
 
@@ -401,21 +322,21 @@ function AnalyticsPage() {
             <div>
               <span>Total Capacity</span>
               <strong>
-                {metrics.totalCapacity.toFixed(0)}%
+                {capacity.totalCapacity.toFixed(0)}%
               </strong>
             </div>
 
             <div>
               <span>Allocated</span>
               <strong>
-                {metrics.allocatedCapacity.toFixed(0)}%
+                {capacity.allocatedCapacity.toFixed(0)}%
               </strong>
             </div>
 
             <div>
               <span>Available</span>
               <strong>
-                {metrics.availableCapacity.toFixed(0)}%
+                {capacity.availableCapacity.toFixed(0)}%
               </strong>
             </div>
           </div>
@@ -424,26 +345,24 @@ function AnalyticsPage() {
             <div
               className="capacity-allocated"
               style={{
-                width:
-                  metrics.totalCapacity > 0
-                    ? `${Math.min(
-                        (metrics.allocatedCapacity /
-                          metrics.totalCapacity) *
-                          100,
-                        100,
-                      )}%`
-                    : '0%',
+                width: `${Math.min(
+                  capacity.utilizationPercentage,
+                  100,
+                )}%`,
               }}
             />
           </div>
 
           <div className="capacity-caption">
             <span>
-              {metrics.allocatedEmployees} allocated employees
+              {formatPercentage(
+                capacity.utilizationPercentage,
+              )}{' '}
+              capacity utilized
             </span>
 
             <span>
-              {metrics.benchEmployees} bench employees
+              {utilization.benchEmployees} bench employees
             </span>
           </div>
         </div>
@@ -452,28 +371,30 @@ function AnalyticsPage() {
           <div className="analytics-panel-header">
             <div>
               <h3>Staffing Demand</h3>
-              <p>Open workforce demand by priority.</p>
+              <p>
+                Open workforce demand by priority.
+              </p>
             </div>
 
             <strong className="analytics-panel-value">
-              {metrics.openDemand}
+              {openDemand}
             </strong>
           </div>
 
           <div className="demand-list">
             <div className="demand-row">
               <span>High Priority</span>
-              <strong>{metrics.highPriorityDemand}</strong>
+              <strong>{highPriorityDemand}</strong>
             </div>
 
             <div className="demand-row">
               <span>Medium Priority</span>
-              <strong>{metrics.mediumPriorityDemand}</strong>
+              <strong>{mediumPriorityDemand}</strong>
             </div>
 
             <div className="demand-row">
               <span>Low Priority</span>
-              <strong>{metrics.lowPriorityDemand}</strong>
+              <strong>{lowPriorityDemand}</strong>
             </div>
           </div>
         </div>
@@ -482,17 +403,19 @@ function AnalyticsPage() {
           <div className="analytics-panel-header">
             <div>
               <h3>Allocation Mix</h3>
-              <p>Share of active allocated capacity by project.</p>
+              <p>
+                Share of active allocated capacity by project.
+              </p>
             </div>
           </div>
 
-          {metrics.allocationMix.length === 0 ? (
+          {allocationMix.length === 0 ? (
             <div className="analytics-empty-chart">
               No active allocations available.
             </div>
           ) : (
             <div className="allocation-list">
-              {metrics.allocationMix.map((project) => (
+              {allocationMix.map((project) => (
                 <div
                   className="allocation-row"
                   key={project.projectId}
@@ -521,6 +444,23 @@ function AnalyticsPage() {
             </div>
           )}
         </div>
+      </div>
+
+      <div className="analytics-detail-action">
+        <div>
+          <strong>Need a deeper utilization view?</strong>
+          <span>
+            Review employee-level utilization and current capacity.
+          </span>
+        </div>
+
+        <Link
+          className="analytics-detail-link"
+          to="/analytics/utilization"
+        >
+          View Utilization Detail
+          <span aria-hidden="true">→</span>
+        </Link>
       </div>
     </section>
   )

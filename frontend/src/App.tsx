@@ -6,6 +6,7 @@ import HomePage from './pages/HomePage'
 import ProjectsPage from './pages/ProjectsPage'
 import RecommendationsPage from './pages/RecommendationsPage'
 import RequirementsPage from './pages/RequirementsPage'
+import UtilizationDetailPage from './pages/UtilizationDetailPage'
 
 function App() {
   return (
@@ -14,9 +15,16 @@ function App() {
         <Route element={<AppLayout />}>
           <Route path="/" element={<HomePage />} />
           <Route path="/analytics" element={<AnalyticsPage />} />
+          <Route
+            path="/analytics/utilization"
+            element={<UtilizationDetailPage />}
+          />
           <Route path="/employees" element={<EmployeesPage />} />
           <Route path="/projects" element={<ProjectsPage />} />
-          <Route path="/requirements" element={<RequirementsPage />} />
+          <Route
+            path="/requirements"
+            element={<RequirementsPage />}
+          />
           <Route
             path="/recommendations"
             element={<RecommendationsPage />}
