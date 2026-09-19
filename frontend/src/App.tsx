@@ -9,6 +9,7 @@ import RecommendationsPage from './pages/RecommendationsPage'
 import RequirementsPage from './pages/RequirementsPage'
 import StaffingDemandPage from './pages/StaffingDemandPage'
 import UtilizationDetailPage from './pages/UtilizationDetailPage'
+import WorkforceOutlookPage from './pages/WorkforceOutlookPage'
 
 function App() {
   return (
@@ -31,6 +32,11 @@ function App() {
           <Route
             path="/analytics/projects"
             element={<ProjectAnalyticsPage />}
+          />
+
+          <Route
+            path="/analytics/outlook"
+            element={<WorkforceOutlookPage />}
           />
 
           <Route path="/employees" element={<EmployeesPage />} />

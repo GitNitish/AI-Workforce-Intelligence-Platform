@@ -416,6 +416,23 @@ function AnalyticsPage() {
           <span aria-hidden="true">→</span>
         </Link>
       </div>
+
+      <div className="analytics-detail-action">
+        <div>
+          <strong>Need a deeper outlook view?</strong>
+          <span>
+            Review current capacity and workforce demand across upcoming months.
+          </span>
+        </div>
+
+        <Link
+          className="analytics-detail-link"
+          to="/analytics/outlook"
+        >
+          View Workforce Outlook
+          <span aria-hidden="true">→</span>
+        </Link>
+      </div>
     </section>
   )
 }

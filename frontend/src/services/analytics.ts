@@ -111,6 +111,22 @@ export interface ProjectAnalytics {
   projectAllocations: ProjectAllocationAnalytics[]
 }
 
+export interface WorkforceOutlookItem {
+  month: string
+  monthLabel: string
+  committedAllocation: number
+  availableCapacity: number
+  openDemand: number
+  openRequirements: number
+}
+
+export interface WorkforceOutlookAnalytics {
+  outlookStart: string
+  outlookEnd: string
+  totalCapacity: number
+  monthlyOutlook: WorkforceOutlookItem[]
+}
+
 export interface AnalyticsData {
   employees: Employee[]
   projects: Project[]
@@ -121,6 +137,7 @@ export interface AnalyticsData {
   capacity: CapacityAnalytics
   staffing: StaffingAnalytics
   projectAnalytics: ProjectAnalytics
+  workforceOutlook: WorkforceOutlookAnalytics
 }
 
 function calculateMedian(values: number[]): number {
@@ -156,6 +173,197 @@ function calculatePercentage(
   return total > 0 ? (value / total) * 100 : 0
 }
 
+function parseDate(value: string | null): Date {
+  if (!value) {
+    return new Date()
+  }
+
+  const [year, month, day] = value
+    .slice(0, 10)
+    .split('-')
+    .map(Number)
+
+  return new Date(year, month - 1, day)
+}
+
+function formatDate(date: Date): string {
+  const year = date.getFullYear()
+  const month = String(date.getMonth() + 1).padStart(2, '0')
+  const day = String(date.getDate()).padStart(2, '0')
+
+  return `${year}-${month}-${day}`
+}
+
+function startOfMonth(date: Date): Date {
+  return new Date(
+    date.getFullYear(),
+    date.getMonth(),
+    1,
+  )
+}
+
+function endOfMonth(date: Date): Date {
+  return new Date(
+    date.getFullYear(),
+    date.getMonth() + 1,
+    0,
+  )
+}
+
+function addMonths(
+  date: Date,
+  months: number,
+): Date {
+  return new Date(
+    date.getFullYear(),
+    date.getMonth() + months,
+    1,
+  )
+}
+
+function formatMonthLabel(date: Date): string {
+  return date.toLocaleDateString('en-US', {
+    month: 'short',
+    year: 'numeric',
+  })
+}
+
+function rangesOverlap(
+  startDate: Date,
+  endDate: Date,
+  rangeStart: Date,
+  rangeEnd: Date,
+): boolean {
+  return (
+    startDate <= rangeEnd &&
+    endDate >= rangeStart
+  )
+}
+
+function calculateWorkforceOutlook(
+  employees: Employee[],
+  allocations: Allocation[],
+  staffingRequirements: StaffingRequirement[],
+): WorkforceOutlookAnalytics {
+  const totalCapacity = employees.length * 100
+
+  const today = new Date()
+  const currentMonth = startOfMonth(today)
+
+  const datedAllocationEnds = allocations
+    .map((allocation) =>
+      allocation.end_date
+        ? parseDate(allocation.end_date)
+        : null,
+    )
+    .filter(
+      (date): date is Date => date !== null,
+    )
+
+  const datedRequirementEnds = staffingRequirements
+    .map((requirement) =>
+      requirement.end_date
+        ? parseDate(requirement.end_date)
+        : null,
+    )
+    .filter(
+      (date): date is Date => date !== null,
+    )
+
+  const datedProjectedEnds = [
+    ...datedAllocationEnds,
+    ...datedRequirementEnds,
+  ]
+
+  const latestKnownEnd =
+    datedProjectedEnds.length > 0
+      ? new Date(
+          Math.max(
+            ...datedProjectedEnds.map((date) =>
+              date.getTime(),
+            ),
+          ),
+        )
+      : currentMonth
+
+  const outlookEnd = endOfMonth(
+    latestKnownEnd > currentMonth
+      ? latestKnownEnd
+      : currentMonth,
+  )
+
+  const monthlyOutlook: WorkforceOutlookItem[] = []
+
+  let monthStart = currentMonth
+
+  while (monthStart <= outlookEnd) {
+    const monthEnd = endOfMonth(monthStart)
+
+    const committedAllocation = allocations
+      .filter(
+        (allocation) =>
+          normalizeValue(allocation.status) ===
+            'active' &&
+          rangesOverlap(
+            parseDate(allocation.start_date),
+            allocation.end_date
+              ? parseDate(allocation.end_date)
+              : outlookEnd,
+            monthStart,
+            monthEnd,
+          ),
+      )
+      .reduce(
+        (total, allocation) =>
+          total + allocation.allocation_percentage,
+        0,
+      )
+
+    const availableCapacity = Math.max(
+      0,
+      totalCapacity - committedAllocation,
+    )
+
+    const openRequirements = staffingRequirements.filter(
+      (requirement) =>
+        normalizeValue(requirement.status) ===
+          'open' &&
+        rangesOverlap(
+          parseDate(requirement.start_date),
+          requirement.end_date
+            ? parseDate(requirement.end_date)
+            : outlookEnd,
+          monthStart,
+          monthEnd,
+        ),
+    )
+
+    const openDemand = openRequirements.reduce(
+      (total, requirement) =>
+        total + requirement.required_quantity,
+      0,
+    )
+
+    monthlyOutlook.push({
+      month: formatDate(monthStart),
+      monthLabel: formatMonthLabel(monthStart),
+      committedAllocation,
+      availableCapacity,
+      openDemand,
+      openRequirements: openRequirements.length,
+    })
+
+    monthStart = addMonths(monthStart, 1)
+  }
+
+  return {
+    outlookStart: formatDate(currentMonth),
+    outlookEnd: formatDate(outlookEnd),
+    totalCapacity,
+    monthlyOutlook,
+  }
+}
+
 export async function getAnalyticsData(): Promise<AnalyticsData> {
   const [employees, projects, allocations] = await Promise.all([
     apiRequest<Employee[]>('/employees'),
@@ -174,14 +382,17 @@ export async function getAnalyticsData(): Promise<AnalyticsData> {
   const staffingRequirements = requirementResponses.flat()
 
   const activeAllocations = allocations.filter(
-    (allocation) => allocation.status === 'active',
+    (allocation) =>
+      normalizeValue(allocation.status) === 'active',
   )
 
   const activeAllocationByEmployee = new Map<string, number>()
 
   for (const allocation of activeAllocations) {
     const current =
-      activeAllocationByEmployee.get(allocation.employee_id) ?? 0
+      activeAllocationByEmployee.get(
+        allocation.employee_id,
+      ) ?? 0
 
     activeAllocationByEmployee.set(
       allocation.employee_id,
@@ -192,7 +403,9 @@ export async function getAnalyticsData(): Promise<AnalyticsData> {
   const employeeUtilization = employees
     .map((employee) => {
       const utilizationPercentage = Math.min(
-        activeAllocationByEmployee.get(employee.employee_id) ?? 0,
+        activeAllocationByEmployee.get(
+          employee.employee_id,
+        ) ?? 0,
         100,
       )
 
@@ -224,7 +437,8 @@ export async function getAnalyticsData(): Promise<AnalyticsData> {
   const averageUtilization =
     totalEmployees > 0
       ? utilizationValues.reduce(
-          (total, utilization) => total + utilization,
+          (total, utilization) =>
+            total + utilization,
           0,
         ) / totalEmployees
       : 0
@@ -297,7 +511,9 @@ export async function getAnalyticsData(): Promise<AnalyticsData> {
   >()
 
   for (const requirement of openRequirements) {
-    const priority = normalizeValue(requirement.priority)
+    const priority = normalizeValue(
+      requirement.priority,
+    )
 
     const current = priorityMap.get(priority) ?? {
       requirementCount: 0,
@@ -318,41 +534,42 @@ export async function getAnalyticsData(): Promise<AnalyticsData> {
     'low',
   ]
 
-  const priorityDemand: StaffingDemandItem[] = Array.from(
-    priorityMap.entries(),
-  )
-    .sort(([first], [second]) => {
-      const firstIndex = priorityOrder.indexOf(first)
-      const secondIndex = priorityOrder.indexOf(second)
+  const priorityDemand: StaffingDemandItem[] =
+    Array.from(priorityMap.entries())
+      .sort(([first], [second]) => {
+        const firstIndex =
+          priorityOrder.indexOf(first)
+        const secondIndex =
+          priorityOrder.indexOf(second)
 
-      if (
-        firstIndex !== -1 &&
-        secondIndex !== -1
-      ) {
-        return firstIndex - secondIndex
-      }
+        if (
+          firstIndex !== -1 &&
+          secondIndex !== -1
+        ) {
+          return firstIndex - secondIndex
+        }
 
-      if (firstIndex !== -1) {
-        return -1
-      }
+        if (firstIndex !== -1) {
+          return -1
+        }
 
-      if (secondIndex !== -1) {
-        return 1
-      }
+        if (secondIndex !== -1) {
+          return 1
+        }
 
-      return first.localeCompare(second)
-    })
-    .map(([priority, values]) => ({
-      label:
-        priority.charAt(0).toUpperCase() +
-        priority.slice(1),
-      requirementCount: values.requirementCount,
-      demand: values.demand,
-      percentage: calculatePercentage(
-        values.demand,
-        openDemand,
-      ),
-    }))
+        return first.localeCompare(second)
+      })
+      .map(([priority, values]) => ({
+        label:
+          priority.charAt(0).toUpperCase() +
+          priority.slice(1),
+        requirementCount: values.requirementCount,
+        demand: values.demand,
+        percentage: calculatePercentage(
+          values.demand,
+          openDemand,
+        ),
+      }))
 
   const projectDemandMap = new Map<
     string,
@@ -364,29 +581,38 @@ export async function getAnalyticsData(): Promise<AnalyticsData> {
 
   for (const requirement of openRequirements) {
     const current =
-      projectDemandMap.get(requirement.project_id) ?? {
+      projectDemandMap.get(
+        requirement.project_id,
+      ) ?? {
         requirementCount: 0,
         demand: 0,
       }
 
-    projectDemandMap.set(requirement.project_id, {
-      requirementCount:
-        current.requirementCount + 1,
-      demand:
-        current.demand + requirement.required_quantity,
-    })
+    projectDemandMap.set(
+      requirement.project_id,
+      {
+        requirementCount:
+          current.requirementCount + 1,
+        demand:
+          current.demand +
+          requirement.required_quantity,
+      },
+    )
   }
 
   const projectDemand: StaffingProjectDemand[] =
     Array.from(projectDemandMap.entries())
       .map(([projectId, values]) => {
-        const project = projectById.get(projectId)
+        const project =
+          projectById.get(projectId)
 
         return {
           projectId,
           projectName:
-            project?.project_name ?? 'Unknown Project',
-          requirementCount: values.requirementCount,
+            project?.project_name ??
+            'Unknown Project',
+          requirementCount:
+            values.requirementCount,
           demand: values.demand,
           percentage: calculatePercentage(
             values.demand,
@@ -408,7 +634,8 @@ export async function getAnalyticsData(): Promise<AnalyticsData> {
   >()
 
   for (const requirement of openRequirements) {
-    const roleName = requirement.role_name.trim()
+    const roleName =
+      requirement.role_name.trim()
 
     const current =
       roleDemandMap.get(roleName) ?? {
@@ -420,26 +647,27 @@ export async function getAnalyticsData(): Promise<AnalyticsData> {
       requirementCount:
         current.requirementCount + 1,
       demand:
-        current.demand + requirement.required_quantity,
+        current.demand +
+        requirement.required_quantity,
     })
   }
 
-  const roleDemand: StaffingRoleDemand[] = Array.from(
-    roleDemandMap.entries(),
-  )
-    .map(([roleName, values]) => ({
-      roleName,
-      requirementCount: values.requirementCount,
-      demand: values.demand,
-      percentage: calculatePercentage(
-        values.demand,
-        openDemand,
-      ),
-    }))
-    .sort(
-      (first, second) =>
-        second.demand - first.demand,
-    )
+  const roleDemand: StaffingRoleDemand[] =
+    Array.from(roleDemandMap.entries())
+      .map(([roleName, values]) => ({
+        roleName,
+        requirementCount:
+          values.requirementCount,
+        demand: values.demand,
+        percentage: calculatePercentage(
+          values.demand,
+          openDemand,
+        ),
+      }))
+      .sort(
+        (first, second) =>
+          second.demand - first.demand,
+      )
 
   const statusMap = new Map<
     string,
@@ -461,7 +689,8 @@ export async function getAnalyticsData(): Promise<AnalyticsData> {
       requirementCount:
         current.requirementCount + 1,
       demand:
-        current.demand + requirement.required_quantity,
+        current.demand +
+        requirement.required_quantity,
     })
   }
 
@@ -476,7 +705,8 @@ export async function getAnalyticsData(): Promise<AnalyticsData> {
     Array.from(statusMap.entries())
       .map(([status, values]) => ({
         status,
-        requirementCount: values.requirementCount,
+        requirementCount:
+          values.requirementCount,
         demand: values.demand,
         percentage: calculatePercentage(
           values.demand,
@@ -499,7 +729,9 @@ export async function getAnalyticsData(): Promise<AnalyticsData> {
 
   for (const allocation of activeAllocations) {
     const current =
-      projectAllocationMap.get(allocation.project_id) ?? {
+      projectAllocationMap.get(
+        allocation.project_id,
+      ) ?? {
         allocatedCapacity: 0,
         employeeIds: new Set<string>(),
         activeAllocations: 0,
@@ -528,16 +760,20 @@ export async function getAnalyticsData(): Promise<AnalyticsData> {
     )
 
   const projectAllocations: ProjectAllocationAnalytics[] =
-    Array.from(projectAllocationMap.entries())
+    Array.from(
+      projectAllocationMap.entries(),
+    )
       .map(([projectId, values]) => {
-        const project = projectById.get(projectId)
+        const project =
+          projectById.get(projectId)
 
         return {
           projectId,
           projectCode:
             project?.project_code ?? 'Unknown',
           projectName:
-            project?.project_name ?? 'Unknown Project',
+            project?.project_name ??
+            'Unknown Project',
           clientName:
             project?.client_name ?? null,
           status:
@@ -564,7 +800,8 @@ export async function getAnalyticsData(): Promise<AnalyticsData> {
 
   const activeProjects = projects.filter(
     (project) =>
-      normalizeValue(project.status) === 'active',
+      normalizeValue(project.status) ===
+      'active',
   ).length
 
   const allocatedProjects =
@@ -578,8 +815,16 @@ export async function getAnalyticsData(): Promise<AnalyticsData> {
 
   const largestProjectAllocation =
     projectAllocations.length > 0
-      ? projectAllocations[0].allocatedCapacity
+      ? projectAllocations[0]
+          .allocatedCapacity
       : 0
+
+  const workforceOutlook =
+    calculateWorkforceOutlook(
+      employees,
+      allocations,
+      staffingRequirements,
+    )
 
   return {
     employees,
@@ -589,9 +834,8 @@ export async function getAnalyticsData(): Promise<AnalyticsData> {
     employeeUtilization,
     utilization: {
       averageUtilization,
-      medianUtilization: calculateMedian(
-        utilizationValues,
-      ),
+      medianUtilization:
+        calculateMedian(utilizationValues),
       highestUtilization:
         utilizationValues.length > 0
           ? Math.max(...utilizationValues)
@@ -603,7 +847,9 @@ export async function getAnalyticsData(): Promise<AnalyticsData> {
       benchEmployees,
       benchPercentage:
         totalEmployees > 0
-          ? (benchEmployees / totalEmployees) * 100
+          ? (benchEmployees /
+              totalEmployees) *
+            100
           : 0,
       distribution,
     },
@@ -614,7 +860,8 @@ export async function getAnalyticsData(): Promise<AnalyticsData> {
       utilizationPercentage,
     },
     staffing: {
-      openRequirements: openRequirements.length,
+      openRequirements:
+        openRequirements.length,
       openDemand,
       priorityDemand,
       projectDemand,
@@ -628,5 +875,6 @@ export async function getAnalyticsData(): Promise<AnalyticsData> {
       largestProjectAllocation,
       projectAllocations,
     },
+    workforceOutlook,
   }
 }
