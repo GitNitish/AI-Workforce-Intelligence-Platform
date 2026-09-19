@@ -98,6 +98,7 @@ function AnalyticsPage() {
     utilization,
     capacity,
     staffing,
+    projectAnalytics,
   } = data
 
   const totalEmployees = data.employees.length
@@ -106,53 +107,11 @@ function AnalyticsPage() {
     (employee) => employee.utilizationPercentage > 0,
   ).length
 
-  const activeAllocations = data.allocations.filter(
-    (allocation) => allocation.status === 'active',
-  )
-
-  const allocationByProject = new Map<string, number>()
-
-  for (const allocation of activeAllocations) {
-    const current =
-      allocationByProject.get(allocation.project_id) ?? 0
-
-    allocationByProject.set(
-      allocation.project_id,
-      current + allocation.allocation_percentage,
-    )
-  }
-
-  const totalAllocatedProjectCapacity = Array.from(
-    allocationByProject.values(),
-  ).reduce(
-    (total, percentage) => total + percentage,
-    0,
-  )
-
-  const allocationMix = data.projects
-    .map((project) => {
-      const allocatedPercentage =
-        allocationByProject.get(project.project_id) ?? 0
-
-      return {
-        projectId: project.project_id,
-        projectName: project.project_name,
-        percentage:
-          totalAllocatedProjectCapacity > 0
-            ? (allocatedPercentage /
-                totalAllocatedProjectCapacity) *
-              100
-            : 0,
-      }
-    })
-    .filter((project) => project.percentage > 0)
-    .sort(
-      (first, second) =>
-        second.percentage - first.percentage,
-    )
+  const allocationMix =
+    projectAnalytics.projectAllocations
 
   const maxAllocationPercentage =
-    allocationMix[0]?.percentage ?? 1
+    allocationMix[0]?.allocationShare ?? 1
 
   const distributionItems = [
     {
@@ -277,7 +236,7 @@ function AnalyticsPage() {
         <div className="analytics-panel">
           <div className="analytics-panel-header">
             <div>
-              <h3>Capacity & Bench</h3>
+              <h3>Capacity &amp; Bench</h3>
               <p>
                 Current workforce capacity allocation.
               </p>
@@ -384,7 +343,7 @@ function AnalyticsPage() {
                   <div className="allocation-row-header">
                     <span>{project.projectName}</span>
                     <strong>
-                      {project.percentage.toFixed(0)}%
+                      {project.allocationShare.toFixed(0)}%
                     </strong>
                   </div>
 
@@ -393,7 +352,7 @@ function AnalyticsPage() {
                       className="analytics-bar-fill"
                       style={{
                         width: `${
-                          (project.percentage /
+                          (project.allocationShare /
                             maxAllocationPercentage) *
                           100
                         }%`,
@@ -437,6 +396,23 @@ function AnalyticsPage() {
           to="/analytics/staffing"
         >
           View Staffing &amp; Demand Detail
+          <span aria-hidden="true">→</span>
+        </Link>
+      </div>
+
+      <div className="analytics-detail-action">
+        <div>
+          <strong>Need a deeper project view?</strong>
+          <span>
+            Review allocation mix and project-level workforce distribution.
+          </span>
+        </div>
+
+        <Link
+          className="analytics-detail-link"
+          to="/analytics/projects"
+        >
+          View Project Analytics
           <span aria-hidden="true">→</span>
         </Link>
       </div>

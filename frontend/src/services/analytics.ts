@@ -90,6 +90,27 @@ export interface StaffingAnalytics {
   statusDemand: StaffingStatusDemand[]
 }
 
+export interface ProjectAllocationAnalytics {
+  projectId: string
+  projectCode: string
+  projectName: string
+  clientName: string | null
+  status: string
+  priority: string
+  allocatedCapacity: number
+  allocationShare: number
+  allocatedEmployees: number
+  activeAllocations: number
+}
+
+export interface ProjectAnalytics {
+  activeProjects: number
+  allocatedProjects: number
+  averageAllocationPerProject: number
+  largestProjectAllocation: number
+  projectAllocations: ProjectAllocationAnalytics[]
+}
+
 export interface AnalyticsData {
   employees: Employee[]
   projects: Project[]
@@ -99,6 +120,7 @@ export interface AnalyticsData {
   utilization: UtilizationAnalytics
   capacity: CapacityAnalytics
   staffing: StaffingAnalytics
+  projectAnalytics: ProjectAnalytics
 }
 
 function calculateMedian(values: number[]): number {
@@ -430,11 +452,10 @@ export async function getAnalyticsData(): Promise<AnalyticsData> {
   for (const requirement of staffingRequirements) {
     const status = requirement.status.trim()
 
-    const current =
-      statusMap.get(status) ?? {
-        requirementCount: 0,
-        demand: 0,
-      }
+    const current = statusMap.get(status) ?? {
+      requirementCount: 0,
+      demand: 0,
+    }
 
     statusMap.set(status, {
       requirementCount:
@@ -466,6 +487,99 @@ export async function getAnalyticsData(): Promise<AnalyticsData> {
         (first, second) =>
           second.demand - first.demand,
       )
+
+  const projectAllocationMap = new Map<
+    string,
+    {
+      allocatedCapacity: number
+      employeeIds: Set<string>
+      activeAllocations: number
+    }
+  >()
+
+  for (const allocation of activeAllocations) {
+    const current =
+      projectAllocationMap.get(allocation.project_id) ?? {
+        allocatedCapacity: 0,
+        employeeIds: new Set<string>(),
+        activeAllocations: 0,
+      }
+
+    current.allocatedCapacity +=
+      allocation.allocation_percentage
+
+    current.employeeIds.add(
+      allocation.employee_id,
+    )
+
+    current.activeAllocations += 1
+
+    projectAllocationMap.set(
+      allocation.project_id,
+      current,
+    )
+  }
+
+  const totalAllocatedProjectCapacity =
+    activeAllocations.reduce(
+      (total, allocation) =>
+        total + allocation.allocation_percentage,
+      0,
+    )
+
+  const projectAllocations: ProjectAllocationAnalytics[] =
+    Array.from(projectAllocationMap.entries())
+      .map(([projectId, values]) => {
+        const project = projectById.get(projectId)
+
+        return {
+          projectId,
+          projectCode:
+            project?.project_code ?? 'Unknown',
+          projectName:
+            project?.project_name ?? 'Unknown Project',
+          clientName:
+            project?.client_name ?? null,
+          status:
+            project?.status ?? 'Unknown',
+          priority:
+            project?.priority ?? 'Unknown',
+          allocatedCapacity:
+            values.allocatedCapacity,
+          allocationShare: calculatePercentage(
+            values.allocatedCapacity,
+            totalAllocatedProjectCapacity,
+          ),
+          allocatedEmployees:
+            values.employeeIds.size,
+          activeAllocations:
+            values.activeAllocations,
+        }
+      })
+      .sort(
+        (first, second) =>
+          second.allocatedCapacity -
+          first.allocatedCapacity,
+      )
+
+  const activeProjects = projects.filter(
+    (project) =>
+      normalizeValue(project.status) === 'active',
+  ).length
+
+  const allocatedProjects =
+    projectAllocations.length
+
+  const averageAllocationPerProject =
+    allocatedProjects > 0
+      ? totalAllocatedProjectCapacity /
+        allocatedProjects
+      : 0
+
+  const largestProjectAllocation =
+    projectAllocations.length > 0
+      ? projectAllocations[0].allocatedCapacity
+      : 0
 
   return {
     employees,
@@ -506,6 +620,13 @@ export async function getAnalyticsData(): Promise<AnalyticsData> {
       projectDemand,
       roleDemand,
       statusDemand,
+    },
+    projectAnalytics: {
+      activeProjects,
+      allocatedProjects,
+      averageAllocationPerProject,
+      largestProjectAllocation,
+      projectAllocations,
     },
   }
 }

@@ -952,11 +952,122 @@
   transition: width 0.25s ease;
 }
 
+/* Project Allocation Analytics */
+
+.project-capacity-list {
+  display: grid;
+  gap: 12px;
+}
+
+.project-capacity-card {
+  padding: 15px;
+  border: 1px solid #eef0f3;
+  border-radius: 8px;
+  background: #fafafa;
+}
+
+.project-capacity-header {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 16px;
+}
+
+.project-capacity-header > div {
+  min-width: 0;
+}
+
+.project-capacity-header > div strong {
+  display: block;
+  color: #111827;
+  font-size: 14px;
+  line-height: 1.4;
+  font-weight: 700;
+  overflow-wrap: anywhere;
+}
+
+.project-capacity-header > div span {
+  display: block;
+  margin-top: 3px;
+  color: #9ca3af;
+  font-size: 11px;
+  line-height: 1.4;
+}
+
+.project-capacity-header > strong {
+  flex-shrink: 0;
+  color: #111827;
+  font-size: 17px;
+  line-height: 1.3;
+  font-weight: 700;
+}
+
+.project-capacity-meta {
+  margin-top: 12px;
+  padding-top: 11px;
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 8px 14px;
+  border-top: 1px solid #e5e7eb;
+}
+
+.project-capacity-meta span {
+  min-width: 0;
+  color: #6b7280;
+  font-size: 11px;
+  line-height: 1.5;
+  overflow-wrap: anywhere;
+}
+
+.project-capacity-stats {
+  margin-top: 12px;
+  padding-top: 11px;
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 8px 14px;
+  border-top: 1px solid #e5e7eb;
+}
+
+.project-capacity-stats > div {
+  min-width: 0;
+}
+
+.project-capacity-stats span {
+  display: block;
+  margin-bottom: 3px;
+  color: #9ca3af;
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: 0.3px;
+  text-transform: uppercase;
+}
+
+.project-capacity-stats strong {
+  display: block;
+  color: #172033;
+  font-size: 13px;
+  line-height: 1.4;
+  font-weight: 700;
+}
+
+.analytics-table td small {
+  display: block;
+  margin-top: 2px;
+  color: #9ca3af;
+  font-size: 10px;
+  line-height: 1.3;
+}
+
 /* Responsive layout */
 
 @media (max-width: 1100px) {
   .analytics-detail-kpi-grid {
     grid-template-columns: repeat(3, minmax(0, 1fr));
+  }
+
+  .project-capacity-meta,
+  .project-capacity-stats {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
   }
 }
 
@@ -1005,6 +1116,11 @@
   }
 
   .capacity-detail-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .project-capacity-meta,
+  .project-capacity-stats {
     grid-template-columns: 1fr;
   }
 }
@@ -1104,5 +1220,14 @@
     width: 100%;
     justify-content: center;
     box-sizing: border-box;
+  }
+
+  .project-capacity-header {
+    gap: 10px;
+  }
+
+  .project-capacity-meta,
+  .project-capacity-stats {
+    grid-template-columns: 1fr;
   }
 }
