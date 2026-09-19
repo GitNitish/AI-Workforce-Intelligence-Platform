@@ -52,6 +52,44 @@ export interface UtilizationAnalytics {
   distribution: UtilizationDistribution
 }
 
+export interface StaffingDemandItem {
+  label: string
+  requirementCount: number
+  demand: number
+  percentage: number
+}
+
+export interface StaffingProjectDemand {
+  projectId: string
+  projectName: string
+  requirementCount: number
+  demand: number
+  percentage: number
+}
+
+export interface StaffingRoleDemand {
+  roleName: string
+  requirementCount: number
+  demand: number
+  percentage: number
+}
+
+export interface StaffingStatusDemand {
+  status: string
+  requirementCount: number
+  demand: number
+  percentage: number
+}
+
+export interface StaffingAnalytics {
+  openRequirements: number
+  openDemand: number
+  priorityDemand: StaffingDemandItem[]
+  projectDemand: StaffingProjectDemand[]
+  roleDemand: StaffingRoleDemand[]
+  statusDemand: StaffingStatusDemand[]
+}
+
 export interface AnalyticsData {
   employees: Employee[]
   projects: Project[]
@@ -60,6 +98,7 @@ export interface AnalyticsData {
   employeeUtilization: EmployeeUtilizationAnalytics[]
   utilization: UtilizationAnalytics
   capacity: CapacityAnalytics
+  staffing: StaffingAnalytics
 }
 
 function calculateMedian(values: number[]): number {
@@ -84,6 +123,17 @@ function calculateMedian(values: number[]): number {
   return sortedValues[middleIndex]
 }
 
+function normalizeValue(value: string): string {
+  return value.trim().toLowerCase()
+}
+
+function calculatePercentage(
+  value: number,
+  total: number,
+): number {
+  return total > 0 ? (value / total) * 100 : 0
+}
+
 export async function getAnalyticsData(): Promise<AnalyticsData> {
   const [employees, projects, allocations] = await Promise.all([
     apiRequest<Employee[]>('/employees'),
@@ -98,6 +148,8 @@ export async function getAnalyticsData(): Promise<AnalyticsData> {
       ),
     ),
   )
+
+  const staffingRequirements = requirementResponses.flat()
 
   const activeAllocations = allocations.filter(
     (allocation) => allocation.status === 'active',
@@ -196,11 +248,230 @@ export async function getAnalyticsData(): Promise<AnalyticsData> {
       ? (allocatedCapacity / totalCapacity) * 100
       : 0
 
+  const projectById = new Map(
+    projects.map((project) => [
+      project.project_id,
+      project,
+    ]),
+  )
+
+  const openRequirements = staffingRequirements.filter(
+    (requirement) =>
+      normalizeValue(requirement.status) === 'open',
+  )
+
+  const openDemand = openRequirements.reduce(
+    (total, requirement) =>
+      total + requirement.required_quantity,
+    0,
+  )
+
+  const priorityMap = new Map<
+    string,
+    {
+      requirementCount: number
+      demand: number
+    }
+  >()
+
+  for (const requirement of openRequirements) {
+    const priority = normalizeValue(requirement.priority)
+
+    const current = priorityMap.get(priority) ?? {
+      requirementCount: 0,
+      demand: 0,
+    }
+
+    priorityMap.set(priority, {
+      requirementCount:
+        current.requirementCount + 1,
+      demand:
+        current.demand + requirement.required_quantity,
+    })
+  }
+
+  const priorityOrder = [
+    'high',
+    'medium',
+    'low',
+  ]
+
+  const priorityDemand: StaffingDemandItem[] = Array.from(
+    priorityMap.entries(),
+  )
+    .sort(([first], [second]) => {
+      const firstIndex = priorityOrder.indexOf(first)
+      const secondIndex = priorityOrder.indexOf(second)
+
+      if (
+        firstIndex !== -1 &&
+        secondIndex !== -1
+      ) {
+        return firstIndex - secondIndex
+      }
+
+      if (firstIndex !== -1) {
+        return -1
+      }
+
+      if (secondIndex !== -1) {
+        return 1
+      }
+
+      return first.localeCompare(second)
+    })
+    .map(([priority, values]) => ({
+      label:
+        priority.charAt(0).toUpperCase() +
+        priority.slice(1),
+      requirementCount: values.requirementCount,
+      demand: values.demand,
+      percentage: calculatePercentage(
+        values.demand,
+        openDemand,
+      ),
+    }))
+
+  const projectDemandMap = new Map<
+    string,
+    {
+      requirementCount: number
+      demand: number
+    }
+  >()
+
+  for (const requirement of openRequirements) {
+    const current =
+      projectDemandMap.get(requirement.project_id) ?? {
+        requirementCount: 0,
+        demand: 0,
+      }
+
+    projectDemandMap.set(requirement.project_id, {
+      requirementCount:
+        current.requirementCount + 1,
+      demand:
+        current.demand + requirement.required_quantity,
+    })
+  }
+
+  const projectDemand: StaffingProjectDemand[] =
+    Array.from(projectDemandMap.entries())
+      .map(([projectId, values]) => {
+        const project = projectById.get(projectId)
+
+        return {
+          projectId,
+          projectName:
+            project?.project_name ?? 'Unknown Project',
+          requirementCount: values.requirementCount,
+          demand: values.demand,
+          percentage: calculatePercentage(
+            values.demand,
+            openDemand,
+          ),
+        }
+      })
+      .sort(
+        (first, second) =>
+          second.demand - first.demand,
+      )
+
+  const roleDemandMap = new Map<
+    string,
+    {
+      requirementCount: number
+      demand: number
+    }
+  >()
+
+  for (const requirement of openRequirements) {
+    const roleName = requirement.role_name.trim()
+
+    const current =
+      roleDemandMap.get(roleName) ?? {
+        requirementCount: 0,
+        demand: 0,
+      }
+
+    roleDemandMap.set(roleName, {
+      requirementCount:
+        current.requirementCount + 1,
+      demand:
+        current.demand + requirement.required_quantity,
+    })
+  }
+
+  const roleDemand: StaffingRoleDemand[] = Array.from(
+    roleDemandMap.entries(),
+  )
+    .map(([roleName, values]) => ({
+      roleName,
+      requirementCount: values.requirementCount,
+      demand: values.demand,
+      percentage: calculatePercentage(
+        values.demand,
+        openDemand,
+      ),
+    }))
+    .sort(
+      (first, second) =>
+        second.demand - first.demand,
+    )
+
+  const statusMap = new Map<
+    string,
+    {
+      requirementCount: number
+      demand: number
+    }
+  >()
+
+  for (const requirement of staffingRequirements) {
+    const status = requirement.status.trim()
+
+    const current =
+      statusMap.get(status) ?? {
+        requirementCount: 0,
+        demand: 0,
+      }
+
+    statusMap.set(status, {
+      requirementCount:
+        current.requirementCount + 1,
+      demand:
+        current.demand + requirement.required_quantity,
+    })
+  }
+
+  const totalRequirementDemand =
+    staffingRequirements.reduce(
+      (total, requirement) =>
+        total + requirement.required_quantity,
+      0,
+    )
+
+  const statusDemand: StaffingStatusDemand[] =
+    Array.from(statusMap.entries())
+      .map(([status, values]) => ({
+        status,
+        requirementCount: values.requirementCount,
+        demand: values.demand,
+        percentage: calculatePercentage(
+          values.demand,
+          totalRequirementDemand,
+        ),
+      }))
+      .sort(
+        (first, second) =>
+          second.demand - first.demand,
+      )
+
   return {
     employees,
     projects,
     allocations,
-    staffingRequirements: requirementResponses.flat(),
+    staffingRequirements,
     employeeUtilization,
     utilization: {
       averageUtilization,
@@ -227,6 +498,14 @@ export async function getAnalyticsData(): Promise<AnalyticsData> {
       allocatedCapacity,
       availableCapacity,
       utilizationPercentage,
+    },
+    staffing: {
+      openRequirements: openRequirements.length,
+      openDemand,
+      priorityDemand,
+      projectDemand,
+      roleDemand,
+      statusDemand,
     },
   }
 }

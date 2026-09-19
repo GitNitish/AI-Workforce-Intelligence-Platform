@@ -97,48 +97,14 @@ function AnalyticsPage() {
   const {
     utilization,
     capacity,
-    employeeUtilization,
+    staffing,
   } = data
 
   const totalEmployees = data.employees.length
 
-  const allocatedEmployees = employeeUtilization.filter(
+  const allocatedEmployees = data.employeeUtilization.filter(
     (employee) => employee.utilizationPercentage > 0,
   ).length
-
-  const openRequirements = data.staffingRequirements.filter(
-    (requirement) => requirement.status === 'open',
-  )
-
-  const openDemand = openRequirements.reduce(
-    (total, requirement) =>
-      total + requirement.required_quantity,
-    0,
-  )
-
-  const highPriorityDemand = openRequirements
-    .filter((requirement) => requirement.priority === 'high')
-    .reduce(
-      (total, requirement) =>
-        total + requirement.required_quantity,
-      0,
-    )
-
-  const mediumPriorityDemand = openRequirements
-    .filter((requirement) => requirement.priority === 'medium')
-    .reduce(
-      (total, requirement) =>
-        total + requirement.required_quantity,
-      0,
-    )
-
-  const lowPriorityDemand = openRequirements
-    .filter((requirement) => requirement.priority === 'low')
-    .reduce(
-      (total, requirement) =>
-        total + requirement.required_quantity,
-      0,
-    )
 
   const activeAllocations = data.allocations.filter(
     (allocation) => allocation.status === 'active',
@@ -256,9 +222,9 @@ function AnalyticsPage() {
 
         <div className="analytics-kpi-card">
           <span>Open Demand</span>
-          <strong>{openDemand}</strong>
+          <strong>{staffing.openDemand}</strong>
           <small>
-            {openRequirements.length} open requirements
+            {staffing.openRequirements} open requirements
           </small>
         </div>
       </div>
@@ -377,25 +343,20 @@ function AnalyticsPage() {
             </div>
 
             <strong className="analytics-panel-value">
-              {openDemand}
+              {staffing.openDemand}
             </strong>
           </div>
 
           <div className="demand-list">
-            <div className="demand-row">
-              <span>High Priority</span>
-              <strong>{highPriorityDemand}</strong>
-            </div>
-
-            <div className="demand-row">
-              <span>Medium Priority</span>
-              <strong>{mediumPriorityDemand}</strong>
-            </div>
-
-            <div className="demand-row">
-              <span>Low Priority</span>
-              <strong>{lowPriorityDemand}</strong>
-            </div>
+            {staffing.priorityDemand.map((item) => (
+              <div
+                className="demand-row"
+                key={item.label}
+              >
+                <span>{item.label} Priority</span>
+                <strong>{item.demand}</strong>
+              </div>
+            ))}
           </div>
         </div>
 
@@ -459,6 +420,23 @@ function AnalyticsPage() {
           to="/analytics/utilization"
         >
           View Utilization Detail
+          <span aria-hidden="true">→</span>
+        </Link>
+      </div>
+
+      <div className="analytics-detail-action">
+        <div>
+          <strong>Need a deeper staffing view?</strong>
+          <span>
+            Explore open demand, priorities, projects and roles.
+          </span>
+        </div>
+
+        <Link
+          className="analytics-detail-link"
+          to="/analytics/staffing"
+        >
+          View Staffing &amp; Demand Detail
           <span aria-hidden="true">→</span>
         </Link>
       </div>

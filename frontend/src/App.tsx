@@ -6,6 +6,7 @@ import HomePage from './pages/HomePage'
 import ProjectsPage from './pages/ProjectsPage'
 import RecommendationsPage from './pages/RecommendationsPage'
 import RequirementsPage from './pages/RequirementsPage'
+import StaffingDemandPage from './pages/StaffingDemandPage'
 import UtilizationDetailPage from './pages/UtilizationDetailPage'
 
 function App() {
@@ -18,6 +19,10 @@ function App() {
           <Route
             path="/analytics/utilization"
             element={<UtilizationDetailPage />}
+          />
+          <Route
+            path="/analytics/staffing"
+            element={<StaffingDemandPage />}
           />
           <Route path="/employees" element={<EmployeesPage />} />
           <Route path="/projects" element={<ProjectsPage />} />
