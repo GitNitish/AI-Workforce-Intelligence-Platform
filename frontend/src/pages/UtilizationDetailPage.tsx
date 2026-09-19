@@ -51,20 +51,29 @@ function UtilizationDetailPage() {
 
   if (loading) {
     return (
-      <section>
+      <section className="analytics-page">
         <div className="analytics-detail-back">
           <Link to="/analytics">
             ← Back to Executive Analytics
           </Link>
         </div>
 
-        <h2>Utilization Detail</h2>
-        <p>
-          Detailed workforce utilization and capacity analysis.
-        </p>
+        <div className="page-heading">
+          <div>
+            <span className="page-eyebrow">
+              WORKFORCE UTILIZATION
+            </span>
+
+            <h2>Utilization Detail</h2>
+
+            <p>
+              Detailed workforce utilization and capacity analysis.
+            </p>
+          </div>
+        </div>
 
         <div className="loading-message">
-          Loading utilization details...
+          Loading utilization analytics...
         </div>
       </section>
     )
@@ -72,17 +81,26 @@ function UtilizationDetailPage() {
 
   if (error) {
     return (
-      <section>
+      <section className="analytics-page">
         <div className="analytics-detail-back">
           <Link to="/analytics">
             ← Back to Executive Analytics
           </Link>
         </div>
 
-        <h2>Utilization Detail</h2>
-        <p>
-          Detailed workforce utilization and capacity analysis.
-        </p>
+        <div className="page-heading">
+          <div>
+            <span className="page-eyebrow">
+              WORKFORCE UTILIZATION
+            </span>
+
+            <h2>Utilization Detail</h2>
+
+            <p>
+              Detailed workforce utilization and capacity analysis.
+            </p>
+          </div>
+        </div>
 
         <div className="error-message">
           {error}
@@ -93,17 +111,26 @@ function UtilizationDetailPage() {
 
   if (!data) {
     return (
-      <section>
+      <section className="analytics-page">
         <div className="analytics-detail-back">
           <Link to="/analytics">
             ← Back to Executive Analytics
           </Link>
         </div>
 
-        <h2>Utilization Detail</h2>
-        <p>
-          Detailed workforce utilization and capacity analysis.
-        </p>
+        <div className="page-heading">
+          <div>
+            <span className="page-eyebrow">
+              WORKFORCE UTILIZATION
+            </span>
+
+            <h2>Utilization Detail</h2>
+
+            <p>
+              Detailed workforce utilization and capacity analysis.
+            </p>
+          </div>
+        </div>
 
         <div className="empty-message">
           No utilization data is available.
@@ -120,11 +147,11 @@ function UtilizationDetailPage() {
 
   const totalEmployees = employeeUtilization.length
 
-  const allocatedEmployees = employeeUtilization.filter(
-    (employee) => employee.utilizationPercentage > 0,
-  ).length
-
-  const benchCapacity = utilization.benchEmployees * 100
+  const maxUtilization =
+    Math.max(
+      utilization.highestUtilization,
+      1,
+    )
 
   const distributionItems = [
     {
@@ -157,92 +184,105 @@ function UtilizationDetailPage() {
         </Link>
       </div>
 
-      <div className="analytics-header">
+      <div className="page-heading">
         <div>
+          <span className="page-eyebrow">
+            WORKFORCE UTILIZATION
+          </span>
+
           <h2>Utilization Detail</h2>
+
           <p>
             Detailed workforce utilization and capacity analysis.
           </p>
         </div>
-      </div>
 
-      <div className="analytics-section">
-        <div className="analytics-section-header">
-          <div>
-            <h3>Utilization Statistics</h3>
-            <p>
-              Current utilization statistics across the workforce.
-            </p>
-          </div>
-        </div>
+        <div className="home-heading-meta">
+          <span>Current workforce snapshot</span>
 
-        <div className="analytics-detail-kpi-grid">
-          <div className="analytics-detail-card">
-            <span>Average</span>
-            <strong>
-              {formatPercentage(
-                utilization.averageUtilization,
-              )}
-            </strong>
-          </div>
-
-          <div className="analytics-detail-card">
-            <span>Median</span>
-            <strong>
-              {formatPercentage(
-                utilization.medianUtilization,
-              )}
-            </strong>
-          </div>
-
-          <div className="analytics-detail-card">
-            <span>Highest</span>
-            <strong>
-              {formatPercentage(
-                utilization.highestUtilization,
-              )}
-            </strong>
-          </div>
-
-          <div className="analytics-detail-card">
-            <span>Lowest</span>
-            <strong>
-              {formatPercentage(
-                utilization.lowestUtilization,
-              )}
-            </strong>
-          </div>
-
-          <div className="analytics-detail-card">
-            <span>Bench Employees</span>
-            <strong>
-              {utilization.benchEmployees}
-            </strong>
-          </div>
-
-          <div className="analytics-detail-card">
-            <span>Bench Percentage</span>
-            <strong>
-              {formatPercentage(
-                utilization.benchPercentage,
-              )}
-            </strong>
-          </div>
+          <strong>
+            {totalEmployees} employees
+          </strong>
         </div>
       </div>
 
-      <div className="analytics-grid analytics-detail-grid">
+      <div className="analytics-detail-kpi-grid">
+        <div className="analytics-detail-card">
+          <span>Average</span>
+
+          <strong>
+            {formatPercentage(
+              utilization.averageUtilization,
+            )}
+          </strong>
+        </div>
+
+        <div className="analytics-detail-card">
+          <span>Median</span>
+
+          <strong>
+            {formatPercentage(
+              utilization.medianUtilization,
+            )}
+          </strong>
+        </div>
+
+        <div className="analytics-detail-card">
+          <span>Highest</span>
+
+          <strong>
+            {formatPercentage(
+              utilization.highestUtilization,
+            )}
+          </strong>
+        </div>
+
+        <div className="analytics-detail-card">
+          <span>Lowest</span>
+
+          <strong>
+            {formatPercentage(
+              utilization.lowestUtilization,
+            )}
+          </strong>
+        </div>
+
+        <div className="analytics-detail-card">
+          <span>Bench Employees</span>
+
+          <strong>
+            {utilization.benchEmployees}
+          </strong>
+        </div>
+
+        <div className="analytics-detail-card">
+          <span>Bench Percentage</span>
+
+          <strong>
+            {formatPercentage(
+              utilization.benchPercentage,
+            )}
+          </strong>
+        </div>
+      </div>
+
+      <div className="analytics-grid">
         <div className="analytics-panel">
           <div className="analytics-panel-header">
             <div>
+              <span className="card-eyebrow">
+                DISTRIBUTION
+              </span>
+
               <h3>Utilization Bands</h3>
+
               <p>
                 Workforce distribution across utilization ranges.
               </p>
             </div>
           </div>
 
-          <div className="analytics-band-list">
+          <div className="analytics-bars">
             {distributionItems.map((item) => {
               const percentage =
                 totalEmployees > 0
@@ -251,170 +291,209 @@ function UtilizationDetailPage() {
 
               return (
                 <div
-                  className="analytics-band-row"
+                  className="analytics-bar-row"
                   key={item.label}
                 >
-                  <div className="analytics-band-info">
+                  <div className="analytics-bar-label">
                     <span>{item.label}</span>
-                    <strong>{item.count}</strong>
+
+                    <strong>
+                      {item.count} (
+                      {percentage.toFixed(1)}%)
+                    </strong>
                   </div>
 
-                  <div className="analytics-band-track">
+                  <div className="analytics-bar-track">
                     <div
-                      className="analytics-band-fill"
+                      className="analytics-bar-fill"
                       style={{
                         width: `${percentage}%`,
                       }}
                     />
                   </div>
-
-                  <small>
-                    {percentage.toFixed(1)}%
-                  </small>
                 </div>
               )
             })}
+          </div>
+
+          <div className="analytics-panel-footer">
+            <span>
+              Average workforce utilization
+            </span>
+
+            <strong>
+              {formatPercentage(
+                utilization.averageUtilization,
+              )}
+            </strong>
           </div>
         </div>
 
         <div className="analytics-panel">
           <div className="analytics-panel-header">
             <div>
+              <span className="card-eyebrow">
+                CAPACITY
+              </span>
+
               <h3>Capacity Overview</h3>
+
               <p>
                 Current capacity position across the workforce.
               </p>
             </div>
           </div>
 
-          <div className="capacity-detail-grid">
+          <div className="capacity-summary">
             <div>
               <span>Total Capacity</span>
+
               <strong>
                 {capacity.totalCapacity.toFixed(0)}%
               </strong>
             </div>
 
             <div>
-              <span>Allocated Capacity</span>
+              <span>Allocated</span>
+
               <strong>
                 {capacity.allocatedCapacity.toFixed(0)}%
               </strong>
             </div>
 
             <div>
-              <span>Available Capacity</span>
+              <span>Available</span>
+
               <strong>
                 {capacity.availableCapacity.toFixed(0)}%
               </strong>
             </div>
+          </div>
 
-            <div>
-              <span>Capacity Utilization</span>
-              <strong>
-                {formatPercentage(
+          <div className="capacity-track">
+            <div
+              className="capacity-allocated"
+              style={{
+                width: `${Math.min(
                   capacity.utilizationPercentage,
-                )}
-              </strong>
-            </div>
+                  100,
+                )}%`,
+              }}
+            />
+          </div>
 
-            <div>
-              <span>Bench Capacity</span>
-              <strong>
-                {benchCapacity.toFixed(0)}%
-              </strong>
-            </div>
+          <div className="capacity-caption">
+            <span>
+              {formatPercentage(
+                capacity.utilizationPercentage,
+              )}{' '}
+              capacity utilized
+            </span>
 
-            <div>
-              <span>Allocated Employees</span>
-              <strong>{allocatedEmployees}</strong>
-            </div>
+            <span>
+              {utilization.benchEmployees} bench employees
+            </span>
+          </div>
+
+          <div className="analytics-capacity-note">
+            <span>Available capacity</span>
+
+            <strong>
+              {capacity.availableCapacity.toFixed(0)}%
+            </strong>
           </div>
         </div>
       </div>
 
-      <div className="analytics-panel analytics-employee-panel">
-        <div className="analytics-panel-header">
+      <div className="analytics-section">
+        <div className="analytics-section-header">
           <div>
+            <span className="page-eyebrow">
+              EMPLOYEE ANALYSIS
+            </span>
+
             <h3>Employee Utilization</h3>
+
             <p>
-              Current utilization and available capacity by employee.
+              Current allocation and available capacity by employee.
             </p>
           </div>
-
-          <strong className="analytics-panel-value">
-            {employeeUtilization.length}
-          </strong>
         </div>
 
         {employeeUtilization.length === 0 ? (
-          <div className="analytics-empty-chart">
-            No employee utilization data available.
+          <div className="analytics-panel">
+            <div className="analytics-empty-chart">
+              No employee utilization data is available.
+            </div>
           </div>
         ) : (
-          <div className="analytics-table-wrapper">
-            <table className="analytics-table">
-              <thead>
-                <tr>
-                  <th>Employee</th>
-                  <th>Code</th>
-                  <th>Department</th>
-                  <th>Designation</th>
-                  <th>Utilization</th>
-                  <th>Available</th>
-                </tr>
-              </thead>
-
-              <tbody>
-                {employeeUtilization.map((employee) => (
-                  <tr key={employee.employeeId}>
-                    <td>
-                      <strong>
-                        {employee.employeeName}
-                      </strong>
-                    </td>
-
-                    <td>{employee.employeeCode}</td>
-
-                    <td>
-                      {employee.department ?? '—'}
-                    </td>
-
-                    <td>
-                      {employee.designation ?? '—'}
-                    </td>
-
-                    <td>
-                      <div className="analytics-table-percentage">
-                        <span>
-                          {formatPercentage(
-                            employee.utilizationPercentage,
-                          )}
-                        </span>
-
-                        <div className="analytics-table-track">
-                          <div
-                            className="analytics-table-fill"
-                            style={{
-                              width: `${Math.min(
-                                employee.utilizationPercentage,
-                                100,
-                              )}%`,
-                            }}
-                          />
-                        </div>
-                      </div>
-                    </td>
-
-                    <td>
-                      {formatPercentage(
-                        employee.availablePercentage,
-                      )}
-                    </td>
+          <div className="analytics-panel analytics-employee-panel">
+            <div className="analytics-table-wrapper">
+              <table className="analytics-table">
+                <thead>
+                  <tr>
+                    <th>Employee</th>
+                    <th>Department</th>
+                    <th>Designation</th>
+                    <th>Utilization</th>
+                    <th>Available</th>
                   </tr>
-                ))}
-              </tbody>
-            </table>
+                </thead>
+
+                <tbody>
+                  {employeeUtilization.map((employee) => (
+                    <tr key={employee.employeeId}>
+                      <td>
+                        <strong>
+                          {employee.employeeName}
+                        </strong>
+
+                        <small>
+                          {employee.employeeCode}
+                        </small>
+                      </td>
+
+                      <td>
+                        {employee.department ?? '—'}
+                      </td>
+
+                      <td>
+                        {employee.designation ?? '—'}
+                      </td>
+
+                      <td>
+                        <div className="analytics-table-percentage">
+                          <span>
+                            {formatPercentage(
+                              employee.utilizationPercentage,
+                            )}
+                          </span>
+
+                          <div className="analytics-table-track">
+                            <div
+                              className="analytics-table-fill"
+                              style={{
+                                width: `${
+                                  (employee.utilizationPercentage /
+                                    maxUtilization) *
+                                  100
+                                }%`,
+                              }}
+                            />
+                          </div>
+                        </div>
+                      </td>
+
+                      <td>
+                        {formatPercentage(
+                          employee.availablePercentage,
+                        )}
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
           </div>
         )}
       </div>

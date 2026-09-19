@@ -2,7 +2,7 @@ import { NavLink, Outlet } from 'react-router-dom'
 import '../App.css'
 
 const navigationItems = [
-  { to: '/', label: 'Home', icon: '⌂' },
+  { to: '/', label: 'Dashboard', icon: '⌂' },
   { to: '/analytics', label: 'Analytics', icon: '▥' },
   { to: '/employees', label: 'Employees', icon: '◉' },
   { to: '/projects', label: 'Projects', icon: '▣' },
@@ -13,60 +13,135 @@ const navigationItems = [
 function AppLayout() {
   return (
     <div className="app-shell">
-      <aside className="sidebar">
-        <div className="brand">
-          <div className="brand-mark">W</div>
-          <div>
-            <div className="brand-name">WorkForceIQ</div>
-            <div className="brand-subtitle">
-              Workforce Intelligence
-            </div>
-          </div>
-        </div>
-
-        <nav className="sidebar-nav" aria-label="Main navigation">
-          <div className="nav-section-label">WORKSPACE</div>
-
-          {navigationItems.map((item) => (
-            <NavLink
-              key={item.to}
-              to={item.to}
-              end={item.to === '/'}
-              className={({ isActive }) =>
-                `nav-link${isActive ? ' active' : ''}`
-              }
-            >
-              <span className="nav-icon" aria-hidden="true">
-                {item.icon}
-              </span>
-              <span>{item.label}</span>
-            </NavLink>
-          ))}
-        </nav>
-
-        <div className="sidebar-footer">
-          <div className="status-dot" aria-hidden="true" />
-          <div>
-            <div className="system-status">Platform Online</div>
-            <div className="system-status-subtitle">
-              AI services ready
-            </div>
-          </div>
-        </div>
-      </aside>
-
       <div className="main-area">
         <header className="topbar">
-          <div>
-            <span className="topbar-label">
-              AI Workforce Intelligence Platform
-            </span>
+          <div className="brand">
+            <div className="brand-mark">W</div>
+
+            <div>
+              <div className="brand-name">WorkForceIQ</div>
+
+              <div className="brand-subtitle">
+                Workforce Intelligence
+              </div>
+            </div>
           </div>
 
-          <div className="topbar-context">
-            <span className="environment-badge">LOCAL</span>
+          <div className="global-search">
+            <span
+              className="global-search-icon"
+              aria-hidden="true"
+            >
+              ⌕
+            </span>
+
+            <input
+              type="search"
+              placeholder="Search employees, projects, skills..."
+              aria-label="Search employees, projects and skills"
+            />
+          </div>
+
+          <div className="topbar-actions">
+            <div className="platform-indicator">
+              <span
+                className="status-dot"
+                aria-hidden="true"
+              />
+
+              <span>Platform Online</span>
+            </div>
+
+            <div className="environment-badge">
+              LOCAL
+            </div>
+
+            <button
+              type="button"
+              className="notification-button"
+              aria-label="Notifications"
+              title="Notifications"
+            >
+              <span aria-hidden="true">♢</span>
+
+              <span className="notification-dot" />
+            </button>
+
+            <div className="user-context">
+              <div
+                className="user-avatar"
+                aria-hidden="true"
+              >
+                N
+              </div>
+
+              <div className="user-details">
+                <strong>Nitish Malik</strong>
+
+                <span>Workspace</span>
+              </div>
+
+              <span
+                className="user-chevron"
+                aria-hidden="true"
+              >
+                ˅
+              </span>
+            </div>
           </div>
         </header>
+
+        <nav
+          className="main-navigation"
+          aria-label="Main navigation"
+        >
+          <div className="navigation-group">
+            <div className="nav-section-label">
+              WORKSPACE
+            </div>
+
+            {navigationItems.map((item) => (
+              <NavLink
+                key={item.to}
+                to={item.to}
+                end={item.to === '/'}
+                className={({ isActive }) =>
+                  `nav-link${isActive ? ' active' : ''}`
+                }
+              >
+                <span
+                  className="nav-icon"
+                  aria-hidden="true"
+                >
+                  {item.icon}
+                </span>
+
+                <span>{item.label}</span>
+              </NavLink>
+            ))}
+          </div>
+
+          <div className="navigation-management">
+            <div className="nav-section-label">
+              MANAGEMENT
+            </div>
+
+            <div className="nav-link nav-link-disabled">
+              <span
+                className="nav-icon"
+                aria-hidden="true"
+              >
+                ⚙
+              </span>
+
+              <span>Administration</span>
+
+              <span className="nav-coming-soon">
+                Soon
+              </span>
+            </div>
+          </div>
+        </nav>
 
         <main className="content">
           <Outlet />
