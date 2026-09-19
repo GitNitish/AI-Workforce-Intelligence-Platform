@@ -5,6 +5,35 @@ from app.models.entities import Employee
 from app.schemas.employee import EmployeeCreate, EmployeeUpdate
 
 
+def _calculate_employee_utilization_from_record(
+    employee: Employee,
+) -> float:
+    active_allocations = [
+        allocation
+        for allocation in employee.allocations
+        if allocation.status == "active"
+    ]
+
+    utilization = sum(
+        allocation.allocation_percentage
+        for allocation in active_allocations
+    )
+
+    return min(utilization, 100.0)
+
+
+def _apply_calculated_utilization(
+    employee: Employee,
+) -> Employee:
+    employee.utilization_percentage = (
+        _calculate_employee_utilization_from_record(
+            employee
+        )
+    )
+
+    return employee
+
+
 def create_employee(
     db: Session,
     employee_data: EmployeeCreate,
@@ -25,7 +54,12 @@ def get_employees(
         select(Employee)
     )
 
-    return list(result.scalars().all())
+    employees = list(result.scalars().all())
+
+    for employee in employees:
+        _apply_calculated_utilization(employee)
+
+    return employees
 
 
 def search_employees(
@@ -88,12 +122,6 @@ def search_employees(
             >= min_experience
         )
 
-    if max_utilization is not None:
-        statement = statement.where(
-            Employee.utilization_percentage
-            <= max_utilization
-        )
-
     if status:
         statement = statement.where(
             Employee.status == status
@@ -105,17 +133,41 @@ def search_employees(
 
     result = db.execute(statement)
 
-    return list(result.scalars().all())
+    employees = list(result.scalars().all())
+
+    for employee in employees:
+        calculated_utilization = (
+            _calculate_employee_utilization_from_record(
+                employee
+            )
+        )
+
+        if (
+            max_utilization is not None
+            and calculated_utilization > max_utilization
+        ):
+            continue
+
+        employee.utilization_percentage = (
+            calculated_utilization
+        )
+
+    return employees
 
 
 def get_employee(
     db: Session,
     employee_id: str,
 ) -> Employee | None:
-    return db.get(
+    employee = db.get(
         Employee,
         employee_id,
     )
+
+    if employee is None:
+        return None
+
+    return _apply_calculated_utilization(employee)
 
 
 def update_employee(
@@ -138,7 +190,7 @@ def update_employee(
     db.commit()
     db.refresh(employee)
 
-    return employee
+    return _apply_calculated_utilization(employee)
 
 
 def delete_employee(
@@ -161,15 +213,6 @@ def calculate_employee_utilization(
     if employee is None:
         raise ValueError("Employee not found")
 
-    active_allocations = [
-        allocation
-        for allocation in employee.allocations
-        if allocation.status == "active"
-    ]
-
-    utilization = sum(
-        allocation.allocation_percentage
-        for allocation in active_allocations
+    return _calculate_employee_utilization_from_record(
+        employee
     )
-
-    return min(utilization, 100.0)
