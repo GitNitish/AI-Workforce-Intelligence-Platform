@@ -3,7 +3,7 @@ from datetime import datetime, timezone
 from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy.orm import Session
 
-from app.api.dependencies import get_current_user
+from app.api.dependencies import require_permission
 from app.database.dependencies import get_db
 
 from app.schemas.allocation import (
@@ -186,7 +186,9 @@ def read_employee_utilization(
 def create_new_employee(
     employee_data: EmployeeCreate,
     db: Session = Depends(get_db),
-    current_user=Depends(get_current_user),
+    current_user=Depends(
+        require_permission("employee.write")
+    ),
 ):
     try:
         employee = create_employee(
@@ -225,6 +227,9 @@ def update_existing_employee(
     employee_id: str,
     employee_data: EmployeeUpdate,
     db: Session = Depends(get_db),
+    current_user=Depends(
+        require_permission("employee.write")
+    ),
 ):
     employee = get_employee(
         db,
@@ -250,7 +255,7 @@ def update_existing_employee(
             entity_type="Employee",
             entity_id=updated_employee.employee_id,
             result="success",
-            user_id=None,
+            user_id=current_user.user_id,
             metadata={
                 "source": "api",
             },
@@ -274,6 +279,9 @@ def update_existing_employee(
 def delete_existing_employee(
     employee_id: str,
     db: Session = Depends(get_db),
+    current_user=Depends(
+        require_permission("employee.write")
+    ),
 ):
     employee = get_employee(
         db,
@@ -299,7 +307,7 @@ def delete_existing_employee(
         entity_type="Employee",
         entity_id=deleted_employee_id,
         result="success",
-        user_id=None,
+        user_id=current_user.user_id,
         metadata={
             "source": "api",
         },
@@ -400,6 +408,9 @@ def list_project_employees(
 def create_new_project(
     project_data: ProjectCreate,
     db: Session = Depends(get_db),
+    current_user=Depends(
+        require_permission("project.write")
+    ),
 ):
     try:
         project = create_project(
@@ -413,7 +424,7 @@ def create_new_project(
             entity_type="Project",
             entity_id=project.project_id,
             result="success",
-            user_id=None,
+            user_id=current_user.user_id,
             metadata={
                 "source": "api",
             },
@@ -438,6 +449,9 @@ def update_existing_project(
     project_id: str,
     project_data: ProjectUpdate,
     db: Session = Depends(get_db),
+    current_user=Depends(
+        require_permission("project.write")
+    ),
 ):
     project = get_project(
         db,
@@ -463,7 +477,7 @@ def update_existing_project(
             entity_type="Project",
             entity_id=updated_project.project_id,
             result="success",
-            user_id=None,
+            user_id=current_user.user_id,
             metadata={
                 "source": "api",
             },
@@ -519,6 +533,9 @@ def create_project_requirement(
     project_id: str,
     requirement_data: StaffingRequirementCreate,
     db: Session = Depends(get_db),
+    current_user=Depends(
+        require_permission("staffing.write")
+    ),
 ):
     try:
         requirement = create_staffing_requirement(
@@ -533,7 +550,7 @@ def create_project_requirement(
             entity_type="StaffingRequirement",
             entity_id=requirement.staffing_requirement_id,
             result="success",
-            user_id=None,
+            user_id=current_user.user_id,
             metadata={
                 "source": "api",
             },
@@ -586,6 +603,9 @@ def update_existing_staffing_requirement(
     requirement_id: str,
     requirement_data: StaffingRequirementUpdate,
     db: Session = Depends(get_db),
+    current_user=Depends(
+        require_permission("staffing.write")
+    ),
 ):
     try:
         requirement = update_staffing_requirement(
@@ -600,7 +620,7 @@ def update_existing_staffing_requirement(
             entity_type="StaffingRequirement",
             entity_id=requirement.staffing_requirement_id,
             result="success",
-            user_id=None,
+            user_id=current_user.user_id,
             metadata={
                 "source": "api",
             },
@@ -635,6 +655,9 @@ def update_existing_staffing_requirement(
 def generate_staffing_recommendations(
     recommendation_request: RecommendationRequest,
     db: Session = Depends(get_db),
+    current_user=Depends(
+        require_permission("recommendation.generate")
+    ),
 ):
     try:
         recommendations = generate_recommendations(
@@ -763,6 +786,9 @@ def read_allocation(
 def create_new_allocation(
     allocation_data: AllocationCreate,
     db: Session = Depends(get_db),
+    current_user=Depends(
+        require_permission("allocation.write")
+    ),
 ):
     try:
         allocation = create_allocation(
@@ -776,7 +802,7 @@ def create_new_allocation(
             entity_type="Allocation",
             entity_id=allocation.allocation_id,
             result="success",
-            user_id=None,
+            user_id=current_user.user_id,
             metadata={
                 "source": "api",
             },
@@ -811,6 +837,9 @@ def update_existing_allocation(
     allocation_id: str,
     allocation_data: AllocationUpdate,
     db: Session = Depends(get_db),
+    current_user=Depends(
+        require_permission("allocation.write")
+    ),
 ):
     allocation = get_allocation(
         db,
@@ -836,7 +865,7 @@ def update_existing_allocation(
             entity_type="Allocation",
             entity_id=updated_allocation.allocation_id,
             result="success",
-            user_id=None,
+            user_id=current_user.user_id,
             metadata={
                 "source": "api",
             },
@@ -860,6 +889,9 @@ def update_existing_allocation(
 def delete_existing_allocation(
     allocation_id: str,
     db: Session = Depends(get_db),
+    current_user=Depends(
+        require_permission("allocation.write")
+    ),
 ):
     allocation = get_allocation(
         db,
@@ -885,7 +917,7 @@ def delete_existing_allocation(
         entity_type="Allocation",
         entity_id=deleted_allocation_id,
         result="success",
-        user_id=None,
+        user_id=current_user.user_id,
         metadata={
             "source": "api",
         },

@@ -36,7 +36,7 @@ def login(
 
         access_token = create_user_access_token(user)
 
-        user.last_login = datetime.now(timezone.utc)
+        user.last_login_at = datetime.now(timezone.utc)
 
         create_audit_event(
             db=db,

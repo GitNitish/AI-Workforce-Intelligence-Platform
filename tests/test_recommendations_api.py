@@ -1,23 +1,82 @@
 from datetime import datetime, timezone
 from types import SimpleNamespace
 
+import pytest
 from fastapi.testclient import TestClient
 
 from app.database.dependencies import get_db
 from app.main import app
 
 
-client = TestClient(app)
-
-
 def override_get_db():
     yield None
 
 
-app.dependency_overrides[get_db] = override_get_db
+def override_recommendation_permission():
+    return SimpleNamespace(
+        user_id="recommendation-test-user",
+        role_id="recommendation-test-role",
+        status="active",
+    )
 
 
-def test_generate_recommendations_returns_success_response(monkeypatch):
+def get_recommendation_permission_dependency():
+    for included_router in app.routes:
+        original_router = getattr(
+            included_router,
+            "original_router",
+            None,
+        )
+
+        if original_router is None:
+            continue
+
+        for route in original_router.routes:
+            if getattr(route, "path", None) != "/recommendations":
+                continue
+
+            for dependency in route.dependant.dependencies:
+                dependency_name = getattr(
+                    dependency.call,
+                    "__name__",
+                    "",
+                )
+
+                if dependency_name == "permission_dependency":
+                    return dependency.call
+
+    raise RuntimeError(
+        "Recommendation permission dependency not found"
+    )
+
+
+@pytest.fixture(autouse=True)
+def recommendation_test_dependencies():
+    original_overrides = app.dependency_overrides.copy()
+
+    recommendation_permission = (
+        get_recommendation_permission_dependency()
+    )
+
+    app.dependency_overrides[get_db] = override_get_db
+    app.dependency_overrides[
+        recommendation_permission
+    ] = override_recommendation_permission
+
+    yield
+
+    app.dependency_overrides.clear()
+    app.dependency_overrides.update(
+        original_overrides
+    )
+
+
+client = TestClient(app)
+
+
+def test_generate_recommendations_returns_success_response(
+    monkeypatch,
+):
     generated_at = datetime.now(timezone.utc)
 
     employee = SimpleNamespace(

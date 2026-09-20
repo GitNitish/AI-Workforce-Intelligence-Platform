@@ -1,3 +1,5 @@
+from collections.abc import Callable
+
 from fastapi import Depends, HTTPException, status
 from fastapi.security import OAuth2PasswordBearer
 from sqlalchemy import select
@@ -5,7 +7,11 @@ from sqlalchemy.orm import Session
 
 from app.core.security import decode_access_token
 from app.database.dependencies import get_db
-from app.models.entities import User
+from app.models.entities import (
+    Permission,
+    RolePermission,
+    User,
+)
 
 
 oauth2_scheme = OAuth2PasswordBearer(
@@ -54,3 +60,42 @@ def get_current_user(
         )
 
     return user
+
+
+def require_permission(
+    permission_name: str,
+) -> Callable:
+    def permission_dependency(
+        current_user: User = Depends(get_current_user),
+        db: Session = Depends(get_db),
+    ) -> User:
+        if current_user.role_id is None:
+            raise HTTPException(
+                status_code=status.HTTP_403_FORBIDDEN,
+                detail="User does not have an assigned role",
+            )
+
+        permission_exists = db.scalar(
+            select(Permission.permission_id)
+            .join(
+                RolePermission,
+                RolePermission.permission_id
+                == Permission.permission_id,
+            )
+            .where(
+                RolePermission.role_id
+                == current_user.role_id,
+                Permission.permission_name
+                == permission_name,
+            )
+        )
+
+        if permission_exists is None:
+            raise HTTPException(
+                status_code=status.HTTP_403_FORBIDDEN,
+                detail=f"Permission required: {permission_name}",
+            )
+
+        return current_user
+
+    return permission_dependency
