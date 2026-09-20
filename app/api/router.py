@@ -3,9 +3,8 @@ from datetime import datetime, timezone
 from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy.orm import Session
 
+from app.api.dependencies import get_current_user
 from app.database.dependencies import get_db
-
-from app.models.entities import StaffingRequirement
 
 from app.schemas.allocation import (
     AllocationCreate,
@@ -45,6 +44,10 @@ from app.services.allocation_service import (
     update_allocation,
 )
 
+from app.services.audit_service import (
+    create_audit_event,
+)
+
 from app.services.employee_service import (
     calculate_employee_utilization,
     create_employee,
@@ -72,6 +75,7 @@ from app.services.staffing_service import (
     create_staffing_requirement,
     get_staffing_requirement,
     get_staffing_requirements,
+    update_staffing_requirement,
 )
 
 
@@ -182,11 +186,35 @@ def read_employee_utilization(
 def create_new_employee(
     employee_data: EmployeeCreate,
     db: Session = Depends(get_db),
+    current_user=Depends(get_current_user),
 ):
-    return create_employee(
-        db,
-        employee_data,
-    )
+    try:
+        employee = create_employee(
+            db,
+            employee_data,
+        )
+
+        create_audit_event(
+            db=db,
+            action="CREATE",
+            entity_type="Employee",
+            entity_id=employee.employee_id,
+            result="success",
+            user_id=current_user.user_id,
+            metadata={
+                "source": "api",
+            },
+        )
+
+        db.commit()
+
+        return employee
+
+    except ValueError as exc:
+        raise HTTPException(
+            status_code=status.HTTP_409_CONFLICT,
+            detail=str(exc),
+        )
 
 
 @api_router.put(
@@ -209,11 +237,34 @@ def update_existing_employee(
             detail="Employee not found",
         )
 
-    return update_employee(
-        db,
-        employee,
-        employee_data,
-    )
+    try:
+        updated_employee = update_employee(
+            db,
+            employee,
+            employee_data,
+        )
+
+        create_audit_event(
+            db=db,
+            action="UPDATE",
+            entity_type="Employee",
+            entity_id=updated_employee.employee_id,
+            result="success",
+            user_id=None,
+            metadata={
+                "source": "api",
+            },
+        )
+
+        db.commit()
+
+        return updated_employee
+
+    except ValueError as exc:
+        raise HTTPException(
+            status_code=status.HTTP_409_CONFLICT,
+            detail=str(exc),
+        )
 
 
 @api_router.delete(
@@ -235,10 +286,26 @@ def delete_existing_employee(
             detail="Employee not found",
         )
 
+    deleted_employee_id = employee.employee_id
+
     delete_employee(
         db,
         employee,
     )
+
+    create_audit_event(
+        db=db,
+        action="DELETE",
+        entity_type="Employee",
+        entity_id=deleted_employee_id,
+        result="success",
+        user_id=None,
+        metadata={
+            "source": "api",
+        },
+    )
+
+    db.commit()
 
 
 # ============================================================
@@ -335,10 +402,26 @@ def create_new_project(
     db: Session = Depends(get_db),
 ):
     try:
-        return create_project(
+        project = create_project(
             db,
             project_data,
         )
+
+        create_audit_event(
+            db=db,
+            action="CREATE",
+            entity_type="Project",
+            entity_id=project.project_id,
+            result="success",
+            user_id=None,
+            metadata={
+                "source": "api",
+            },
+        )
+
+        db.commit()
+
+        return project
 
     except ValueError as exc:
         raise HTTPException(
@@ -368,11 +451,27 @@ def update_existing_project(
         )
 
     try:
-        return update_project(
+        updated_project = update_project(
             db,
             project,
             project_data,
         )
+
+        create_audit_event(
+            db=db,
+            action="UPDATE",
+            entity_type="Project",
+            entity_id=updated_project.project_id,
+            result="success",
+            user_id=None,
+            metadata={
+                "source": "api",
+            },
+        )
+
+        db.commit()
+
+        return updated_project
 
     except ValueError as exc:
         raise HTTPException(
@@ -422,15 +521,37 @@ def create_project_requirement(
     db: Session = Depends(get_db),
 ):
     try:
-        return create_staffing_requirement(
+        requirement = create_staffing_requirement(
             db,
             project_id,
             requirement_data,
         )
 
+        create_audit_event(
+            db=db,
+            action="CREATE",
+            entity_type="StaffingRequirement",
+            entity_id=requirement.staffing_requirement_id,
+            result="success",
+            user_id=None,
+            metadata={
+                "source": "api",
+            },
+        )
+
+        db.commit()
+
+        return requirement
+
     except ValueError as exc:
+        if str(exc) == "Project not found":
+            raise HTTPException(
+                status_code=status.HTTP_404_NOT_FOUND,
+                detail=str(exc),
+            )
+
         raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND,
+            status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
             detail=str(exc),
         )
 
@@ -466,55 +587,40 @@ def update_existing_staffing_requirement(
     requirement_data: StaffingRequirementUpdate,
     db: Session = Depends(get_db),
 ):
-    requirement = db.get(
-        StaffingRequirement,
-        requirement_id,
-    )
-
-    if requirement is None:
-        raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND,
-            detail="Staffing requirement not found",
+    try:
+        requirement = update_staffing_requirement(
+            db,
+            requirement_id,
+            requirement_data,
         )
 
-    update_data = requirement_data.model_dump(
-        exclude_unset=True
-    )
+        create_audit_event(
+            db=db,
+            action="UPDATE",
+            entity_type="StaffingRequirement",
+            entity_id=requirement.staffing_requirement_id,
+            result="success",
+            user_id=None,
+            metadata={
+                "source": "api",
+            },
+        )
 
-    new_start_date = update_data.get(
-        "start_date",
-        requirement.start_date,
-    )
+        db.commit()
 
-    new_end_date = update_data.get(
-        "end_date",
-        requirement.end_date,
-    )
+        return requirement
 
-    if (
-        new_start_date is not None
-        and new_end_date is not None
-        and new_end_date < new_start_date
-    ):
+    except ValueError as exc:
+        if str(exc) == "Staffing requirement not found":
+            raise HTTPException(
+                status_code=status.HTTP_404_NOT_FOUND,
+                detail=str(exc),
+            )
+
         raise HTTPException(
             status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
-            detail=(
-                "end_date must be greater than "
-                "or equal to start_date"
-            ),
+            detail=str(exc),
         )
-
-    for field, value in update_data.items():
-        setattr(
-            requirement,
-            field,
-            value,
-        )
-
-    db.commit()
-    db.refresh(requirement)
-
-    return requirement
 
 
 # ============================================================
@@ -659,10 +765,26 @@ def create_new_allocation(
     db: Session = Depends(get_db),
 ):
     try:
-        return create_allocation(
+        allocation = create_allocation(
             db,
             allocation_data,
         )
+
+        create_audit_event(
+            db=db,
+            action="CREATE",
+            entity_type="Allocation",
+            entity_id=allocation.allocation_id,
+            result="success",
+            user_id=None,
+            metadata={
+                "source": "api",
+            },
+        )
+
+        db.commit()
+
+        return allocation
 
     except ValueError as exc:
 
@@ -702,11 +824,27 @@ def update_existing_allocation(
         )
 
     try:
-        return update_allocation(
+        updated_allocation = update_allocation(
             db,
             allocation,
             allocation_data,
         )
+
+        create_audit_event(
+            db=db,
+            action="UPDATE",
+            entity_type="Allocation",
+            entity_id=updated_allocation.allocation_id,
+            result="success",
+            user_id=None,
+            metadata={
+                "source": "api",
+            },
+        )
+
+        db.commit()
+
+        return updated_allocation
 
     except ValueError as exc:
         raise HTTPException(
@@ -734,7 +872,23 @@ def delete_existing_allocation(
             detail="Allocation not found",
         )
 
+    deleted_allocation_id = allocation.allocation_id
+
     delete_allocation(
         db,
         allocation,
     )
+
+    create_audit_event(
+        db=db,
+        action="DELETE",
+        entity_type="Allocation",
+        entity_id=deleted_allocation_id,
+        result="success",
+        user_id=None,
+        metadata={
+            "source": "api",
+        },
+    )
+
+    db.commit()

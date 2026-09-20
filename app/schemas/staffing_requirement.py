@@ -1,6 +1,11 @@
 from datetime import date, datetime
 
-from pydantic import BaseModel, ConfigDict, Field, model_validator
+from pydantic import (
+    BaseModel,
+    ConfigDict,
+    Field,
+    model_validator,
+)
 
 
 class StaffingRequirementBase(BaseModel):
@@ -100,9 +105,43 @@ class StaffingRequirementUpdate(BaseModel):
 
 
 class StaffingRequirementResponse(StaffingRequirementBase):
-    model_config = ConfigDict(from_attributes=True)
-
     staffing_requirement_id: str
     project_id: str
     created_at: datetime
     updated_at: datetime
+
+    model_config = ConfigDict(
+        from_attributes=True
+    )
+
+    @model_validator(mode="before")
+    @classmethod
+    def map_relationships(cls, data):
+        if isinstance(data, dict):
+            return data
+
+        return {
+            "role_name": data.role_name,
+            "required_quantity": data.required_quantity,
+            "required_experience": data.required_experience,
+            "required_proficiency": data.required_proficiency,
+            "start_date": data.start_date,
+            "end_date": data.end_date,
+            "priority": data.priority,
+            "status": data.status,
+            "required_skill_ids": [
+                required_skill.skill_id
+                for required_skill in data.required_skills
+            ],
+            "required_certifications": [
+                required_certification.certification_name
+                for required_certification
+                in data.required_certifications
+            ],
+            "staffing_requirement_id": (
+                data.staffing_requirement_id
+            ),
+            "project_id": data.project_id,
+            "created_at": data.created_at,
+            "updated_at": data.updated_at,
+        }

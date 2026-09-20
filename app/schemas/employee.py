@@ -14,11 +14,6 @@ class EmployeeBase(BaseModel):
         ge=0,
     )
     availability_status: str = "available"
-    utilization_percentage: float = Field(
-        default=0,
-        ge=0,
-        le=100,
-    )
     location: str | None = None
     status: str = "active"
 
@@ -38,17 +33,16 @@ class EmployeeUpdate(BaseModel):
         ge=0,
     )
     availability_status: str | None = None
-    utilization_percentage: float | None = Field(
-        default=None,
-        ge=0,
-        le=100,
-    )
     location: str | None = None
     status: str | None = None
 
 
 class EmployeeResponse(EmployeeBase):
     employee_id: str
+    utilization_percentage: float = Field(
+        ge=0,
+        le=100,
+    )
     created_at: datetime
     updated_at: datetime
 

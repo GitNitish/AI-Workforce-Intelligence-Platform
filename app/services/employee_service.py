@@ -1,4 +1,5 @@
 from sqlalchemy import select
+from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import Session
 
 from app.models.entities import Employee
@@ -38,13 +39,49 @@ def create_employee(
     db: Session,
     employee_data: EmployeeCreate,
 ) -> Employee:
-    employee = Employee(**employee_data.model_dump())
+
+    existing_employee = db.scalar(
+        select(Employee).where(
+            Employee.employee_code
+            == employee_data.employee_code
+        )
+    )
+
+    if existing_employee is not None:
+        raise ValueError(
+            "Employee code already exists"
+        )
+
+    existing_employee = db.scalar(
+        select(Employee).where(
+            Employee.email == employee_data.email
+        )
+    )
+
+    if existing_employee is not None:
+        raise ValueError(
+            "Employee email already exists"
+        )
+
+    employee = Employee(
+        **employee_data.model_dump()
+    )
 
     db.add(employee)
-    db.commit()
+
+    try:
+        db.commit()
+
+    except IntegrityError:
+        db.rollback()
+
+        raise ValueError(
+            "Employee code or email already exists"
+        )
+
     db.refresh(employee)
 
-    return employee
+    return _apply_calculated_utilization(employee)
 
 
 def get_employees(
@@ -180,6 +217,36 @@ def update_employee(
         exclude_unset=True
     )
 
+    if "employee_code" in update_data:
+        existing_employee = db.scalar(
+            select(Employee).where(
+                Employee.employee_code
+                == update_data["employee_code"],
+                Employee.employee_id
+                != employee.employee_id,
+            )
+        )
+
+        if existing_employee is not None:
+            raise ValueError(
+                "Employee code already exists"
+            )
+
+    if "email" in update_data:
+        existing_employee = db.scalar(
+            select(Employee).where(
+                Employee.email
+                == update_data["email"],
+                Employee.employee_id
+                != employee.employee_id,
+            )
+        )
+
+        if existing_employee is not None:
+            raise ValueError(
+                "Employee email already exists"
+            )
+
     for field, value in update_data.items():
         setattr(
             employee,
@@ -187,7 +254,16 @@ def update_employee(
             value,
         )
 
-    db.commit()
+    try:
+        db.commit()
+
+    except IntegrityError:
+        db.rollback()
+
+        raise ValueError(
+            "Employee code or email already exists"
+        )
+
     db.refresh(employee)
 
     return _apply_calculated_utilization(employee)
