@@ -4,20 +4,46 @@ export const API_BASE_URL = (
   import.meta.env.VITE_API_BASE_URL ?? DEFAULT_API_BASE_URL
 ).replace(/\/+$/, '')
 
+export const AUTH_STORAGE_KEY = 'workforceiq_access_token'
+
+export function getStoredAccessToken(): string | null {
+  return localStorage.getItem(AUTH_STORAGE_KEY)
+}
+
+export function setStoredAccessToken(token: string): void {
+  localStorage.setItem(AUTH_STORAGE_KEY, token)
+}
+
+export function clearStoredAccessToken(): void {
+  localStorage.removeItem(AUTH_STORAGE_KEY)
+}
+
 export async function apiRequest<T>(
   path: string,
   options?: RequestInit,
 ): Promise<T> {
   const normalizedPath = path.startsWith('/') ? path : `/${path}`
 
+  const headers = new Headers(options?.headers)
+
+  const accessToken = getStoredAccessToken()
+
+  if (accessToken && !headers.has('Authorization')) {
+    headers.set('Authorization', `Bearer ${accessToken}`)
+  }
+
+  if (
+    !(options?.body instanceof URLSearchParams) &&
+    !headers.has('Content-Type')
+  ) {
+    headers.set('Content-Type', 'application/json')
+  }
+
   const response = await fetch(
     `${API_BASE_URL}${normalizedPath}`,
     {
       ...options,
-      headers: {
-        'Content-Type': 'application/json',
-        ...options?.headers,
-      },
+      headers,
     },
   )
 

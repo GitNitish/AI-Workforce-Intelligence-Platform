@@ -1,5 +1,12 @@
-import { NavLink, Outlet } from 'react-router-dom'
+import {
+  NavLink,
+  Outlet,
+  useNavigate,
+} from 'react-router-dom'
+import { useState } from 'react'
 import '../App.css'
+
+import { useAuth } from '../auth/useAuth'
 
 const navigationItems = [
   { to: '/', label: 'Dashboard', icon: '⌂' },
@@ -10,7 +17,27 @@ const navigationItems = [
   { to: '/recommendations', label: 'Recommendations', icon: '✦' },
 ]
 
+function getUserInitial(username: string): string {
+  return username.charAt(0).toUpperCase()
+}
+
 function AppLayout() {
+  const { user, logout } = useAuth()
+  const navigate = useNavigate()
+
+  const [isUserMenuOpen, setIsUserMenuOpen] =
+    useState(false)
+
+  const username = user?.username ?? 'User'
+  const role = user?.role ?? 'Workspace'
+  const userInitial = getUserInitial(username)
+
+  function handleLogout(): void {
+    logout()
+    setIsUserMenuOpen(false)
+    navigate('/login', { replace: true })
+  }
+
   return (
     <div className="app-shell">
       <div className="main-area">
@@ -68,25 +95,62 @@ function AppLayout() {
             </button>
 
             <div className="user-context">
-              <div
-                className="user-avatar"
-                aria-hidden="true"
+              <button
+                type="button"
+                className="user-context-button"
+                aria-expanded={isUserMenuOpen}
+                aria-haspopup="menu"
+                aria-label={`Account menu for ${username}`}
+                onClick={() =>
+                  setIsUserMenuOpen(
+                    (isOpen) => !isOpen,
+                  )
+                }
               >
-                N
-              </div>
+                <div
+                  className="user-avatar"
+                  aria-hidden="true"
+                >
+                  {userInitial}
+                </div>
 
-              <div className="user-details">
-                <strong>Nitish Malik</strong>
+                <div className="user-details">
+                  <strong>{username}</strong>
 
-                <span>Workspace</span>
-              </div>
+                  <span>{role}</span>
+                </div>
 
-              <span
-                className="user-chevron"
-                aria-hidden="true"
-              >
-                ˅
-              </span>
+                <span
+                  className="user-chevron"
+                  aria-hidden="true"
+                >
+                  {isUserMenuOpen ? '⌃' : '˅'}
+                </span>
+              </button>
+
+              {isUserMenuOpen && (
+                <div
+                  className="user-menu"
+                  role="menu"
+                >
+                  <div className="user-menu-header">
+                    <strong>{username}</strong>
+                    <span>{role}</span>
+                  </div>
+
+                  <button
+                    type="button"
+                    className="user-menu-item"
+                    role="menuitem"
+                    onClick={handleLogout}
+                  >
+                    <span aria-hidden="true">
+                      ↪
+                    </span>
+                    <span>Logout</span>
+                  </button>
+                </div>
+              )}
             </div>
           </div>
         </header>

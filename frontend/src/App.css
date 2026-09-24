@@ -3031,3 +3031,118 @@
     grid-template-columns: 1fr;
   }
 }
+
+/* =========================================================
+   Authentication / User Account Menu
+   Scoped only to the authenticated user section.
+   ========================================================= */
+
+.user-context {
+  position: relative;
+}
+
+.user-context-button {
+  min-width: 0;
+  display: flex;
+  align-items: center;
+  gap: 9px;
+  margin: 0;
+  padding: 0;
+  border: 0;
+  background: transparent;
+  color: inherit;
+  font: inherit;
+  text-align: left;
+  cursor: pointer;
+}
+
+.user-context-button:hover .user-details strong {
+  color: #2563eb;
+}
+
+.user-context-button:focus-visible {
+  outline: 2px solid #93c5fd;
+  outline-offset: 3px;
+  border-radius: 6px;
+}
+
+.user-menu {
+  position: absolute;
+  top: calc(100% + 9px);
+  right: 0;
+  z-index: 1000;
+  width: 210px;
+  padding: 6px;
+  box-sizing: border-box;
+  border: 1px solid #e5e7eb;
+  border-radius: 9px;
+  background: #ffffff;
+  box-shadow: 0 10px 24px rgba(15, 23, 42, 0.12);
+}
+
+.user-menu-header {
+  padding: 9px 10px;
+  border-bottom: 1px solid #eef0f3;
+}
+
+.user-menu-header strong {
+  display: block;
+  overflow: hidden;
+  color: #172033;
+  font-size: 11px;
+  line-height: 1.35;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.user-menu-header span {
+  display: block;
+  margin-top: 2px;
+  color: #9ca3af;
+  font-size: 9px;
+  line-height: 1.35;
+}
+
+.user-menu-item {
+  width: 100%;
+  min-height: 34px;
+  margin-top: 4px;
+  padding: 0 10px;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  box-sizing: border-box;
+  border: 0;
+  border-radius: 6px;
+  background: transparent;
+  color: #374151;
+  font: inherit;
+  font-size: 11px;
+  font-weight: 600;
+  text-align: left;
+  cursor: pointer;
+}
+
+.user-menu-item:hover {
+  background: #f3f4f6;
+  color: #111827;
+}
+
+.user-menu-item:focus-visible {
+  outline: 2px solid #93c5fd;
+  outline-offset: -2px;
+}
+
+.user-menu-item > span:first-child {
+  color: #6b7280;
+  font-size: 14px;
+  line-height: 1;
+}
+
+@media (max-width: 760px) {
+  .user-menu {
+    top: calc(100% + 7px);
+    right: 0;
+    width: 190px;
+  }
+}
