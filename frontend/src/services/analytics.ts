@@ -2,20 +2,7 @@ import type { Employee } from '../types/employee'
 import type { Project } from '../types/project'
 import type { StaffingRequirement } from '../types/staffingRequirement'
 import { apiRequest } from './api'
-
-export interface Allocation {
-  allocation_id: string
-  employee_id: string
-  project_id: string
-  staffing_requirement_id: string | null
-  allocation_percentage: number
-  start_date: string
-  end_date: string | null
-  status: string
-  allocated_by: string | null
-  created_at: string
-  updated_at: string
-}
+import type { Allocation, AnalyticsSourceData } from './analyticsTypes'
 
 export interface EmployeeUtilizationAnalytics {
   employeeId: string
@@ -380,6 +367,24 @@ export async function getAnalyticsData(): Promise<AnalyticsData> {
   )
 
   const staffingRequirements = requirementResponses.flat()
+
+  return calculateAnalyticsData({
+    employees,
+    projects,
+    allocations,
+    staffingRequirements,
+  })
+}
+
+export function calculateAnalyticsData(
+  data: AnalyticsSourceData,
+): AnalyticsData {
+  const {
+    employees,
+    projects,
+    allocations,
+    staffingRequirements,
+  } = data
 
   const activeAllocations = allocations.filter(
     (allocation) =>

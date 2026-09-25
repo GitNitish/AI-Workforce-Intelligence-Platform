@@ -1,9 +1,15 @@
-import { useEffect, useState } from 'react'
+import { useEffect, useMemo, useState } from 'react'
 import { Link } from 'react-router-dom'
 import {
+  calculateAnalyticsData,
   getAnalyticsData,
   type AnalyticsData,
 } from '../services/analytics'
+import {
+  DEFAULT_ANALYTICS_FILTERS,
+  filterAnalyticsSources,
+  type AnalyticsFilters,
+} from '../services/analyticsFilters'
 
 function formatPercentage(value: number): string {
   return `${value.toFixed(1)}%`
@@ -11,6 +17,9 @@ function formatPercentage(value: number): string {
 
 function UtilizationDetailPage() {
   const [data, setData] = useState<AnalyticsData | null>(null)
+  const [filters, setFilters] = useState<AnalyticsFilters>({
+    ...DEFAULT_ANALYTICS_FILTERS,
+  })
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
 
@@ -48,6 +57,126 @@ function UtilizationDetailPage() {
       cancelled = true
     }
   }, [])
+
+  const filterOptions = useMemo(() => {
+    if (!data) {
+      return {
+        departments: [],
+        designations: [],
+        projects: [],
+        projectStatuses: [],
+        projectPriorities: [],
+        allocationStatuses: [],
+      }
+    }
+
+    const departments = Array.from(
+      new Set(
+        data.employees
+          .map((employee) => employee.department)
+          .filter(
+            (department): department is string =>
+              Boolean(department?.trim()),
+          ),
+      ),
+    ).sort((first, second) =>
+      first.localeCompare(second),
+    )
+
+    const designations = Array.from(
+      new Set(
+        data.employees
+          .map((employee) => employee.designation)
+          .filter(
+            (designation): designation is string =>
+              Boolean(designation?.trim()),
+          ),
+      ),
+    ).sort((first, second) =>
+      first.localeCompare(second),
+    )
+
+    const projects = [...data.projects].sort(
+      (first, second) =>
+        first.project_name.localeCompare(
+          second.project_name,
+        ),
+    )
+
+    const projectStatuses = Array.from(
+      new Set(
+        data.projects
+          .map((project) => project.status)
+          .filter((status) => Boolean(status?.trim())),
+      ),
+    ).sort((first, second) =>
+      first.localeCompare(second),
+    )
+
+    const projectPriorities = Array.from(
+      new Set(
+        data.projects
+          .map((project) => project.priority)
+          .filter((priority) =>
+            Boolean(priority?.trim()),
+          ),
+      ),
+    ).sort((first, second) =>
+      first.localeCompare(second),
+    )
+
+    const allocationStatuses = Array.from(
+      new Set(
+        data.allocations
+          .map((allocation) => allocation.status)
+          .filter((status) => Boolean(status?.trim())),
+      ),
+    ).sort((first, second) =>
+      first.localeCompare(second),
+    )
+
+    return {
+      departments,
+      designations,
+      projects,
+      projectStatuses,
+      projectPriorities,
+      allocationStatuses,
+    }
+  }, [data])
+
+  const filteredData = useMemo(() => {
+    if (!data) {
+      return null
+    }
+
+    const filteredSources = filterAnalyticsSources(
+      data,
+      filters,
+    )
+
+    return calculateAnalyticsData(filteredSources)
+  }, [data, filters])
+
+  const updateFilter = (
+    key: keyof AnalyticsFilters,
+    value: string,
+  ) => {
+    setFilters((currentFilters) => ({
+      ...currentFilters,
+      [key]: value || null,
+    }))
+  }
+
+  const resetFilters = () => {
+    setFilters({
+      ...DEFAULT_ANALYTICS_FILTERS,
+    })
+  }
+
+  const hasActiveFilters = Object.values(filters).some(
+    (value) => Boolean(value),
+  )
 
   if (loading) {
     return (
@@ -109,7 +238,7 @@ function UtilizationDetailPage() {
     )
   }
 
-  if (!data) {
+  if (!data || !filteredData) {
     return (
       <section className="analytics-page">
         <div className="analytics-detail-back">
@@ -143,7 +272,7 @@ function UtilizationDetailPage() {
     utilization,
     capacity,
     employeeUtilization,
-  } = data
+  } = filteredData
 
   const totalEmployees = employeeUtilization.length
 
@@ -204,6 +333,362 @@ function UtilizationDetailPage() {
             {totalEmployees} employees
           </strong>
         </div>
+      </div>
+
+      <div
+        className="analytics-panel"
+        style={{
+          marginBottom: '24px',
+        }}
+      >
+        <div className="analytics-panel-header">
+          <div>
+            <span className="card-eyebrow">
+              FILTERS
+            </span>
+
+            <h3>Workforce Scope</h3>
+
+            <p>
+              Refine utilization and capacity analysis
+              using workforce and allocation attributes.
+            </p>
+          </div>
+
+          {hasActiveFilters && (
+            <button
+              type="button"
+              onClick={resetFilters}
+              style={{
+                border: '1px solid var(--border-color, #d9dee7)',
+                background: 'transparent',
+                borderRadius: '8px',
+                padding: '8px 12px',
+                cursor: 'pointer',
+                fontWeight: 600,
+              }}
+            >
+              Reset Filters
+            </button>
+          )}
+        </div>
+
+        <div
+          style={{
+            display: 'grid',
+            gridTemplateColumns:
+              'repeat(auto-fit, minmax(180px, 1fr))',
+            gap: '14px',
+            marginTop: '18px',
+          }}
+        >
+          <label
+            style={{
+              display: 'flex',
+              flexDirection: 'column',
+              gap: '6px',
+            }}
+          >
+            <span
+              style={{
+                fontSize: '0.8rem',
+                fontWeight: 600,
+              }}
+            >
+              Department
+            </span>
+
+            <select
+              value={filters.department ?? ''}
+              onChange={(event) =>
+                updateFilter(
+                  'department',
+                  event.target.value,
+                )
+              }
+              style={{
+                width: '100%',
+                padding: '9px 10px',
+                borderRadius: '8px',
+                border:
+                  '1px solid var(--border-color, #d9dee7)',
+                background:
+                  'var(--card-background, #ffffff)',
+              }}
+            >
+              <option value="">All departments</option>
+
+              {filterOptions.departments.map(
+                (department) => (
+                  <option
+                    key={department}
+                    value={department}
+                  >
+                    {department}
+                  </option>
+                ),
+              )}
+            </select>
+          </label>
+
+          <label
+            style={{
+              display: 'flex',
+              flexDirection: 'column',
+              gap: '6px',
+            }}
+          >
+            <span
+              style={{
+                fontSize: '0.8rem',
+                fontWeight: 600,
+              }}
+            >
+              Designation
+            </span>
+
+            <select
+              value={filters.designation ?? ''}
+              onChange={(event) =>
+                updateFilter(
+                  'designation',
+                  event.target.value,
+                )
+              }
+              style={{
+                width: '100%',
+                padding: '9px 10px',
+                borderRadius: '8px',
+                border:
+                  '1px solid var(--border-color, #d9dee7)',
+                background:
+                  'var(--card-background, #ffffff)',
+              }}
+            >
+              <option value="">All designations</option>
+
+              {filterOptions.designations.map(
+                (designation) => (
+                  <option
+                    key={designation}
+                    value={designation}
+                  >
+                    {designation}
+                  </option>
+                ),
+              )}
+            </select>
+          </label>
+
+          <label
+            style={{
+              display: 'flex',
+              flexDirection: 'column',
+              gap: '6px',
+            }}
+          >
+            <span
+              style={{
+                fontSize: '0.8rem',
+                fontWeight: 600,
+              }}
+            >
+              Project
+            </span>
+
+            <select
+              value={filters.projectId ?? ''}
+              onChange={(event) =>
+                updateFilter(
+                  'projectId',
+                  event.target.value,
+                )
+              }
+              style={{
+                width: '100%',
+                padding: '9px 10px',
+                borderRadius: '8px',
+                border:
+                  '1px solid var(--border-color, #d9dee7)',
+                background:
+                  'var(--card-background, #ffffff)',
+              }}
+            >
+              <option value="">All projects</option>
+
+              {filterOptions.projects.map(
+                (project) => (
+                  <option
+                    key={project.project_id}
+                    value={project.project_id}
+                  >
+                    {project.project_name}
+                  </option>
+                ),
+              )}
+            </select>
+          </label>
+
+          <label
+            style={{
+              display: 'flex',
+              flexDirection: 'column',
+              gap: '6px',
+            }}
+          >
+            <span
+              style={{
+                fontSize: '0.8rem',
+                fontWeight: 600,
+              }}
+            >
+              Project Status
+            </span>
+
+            <select
+              value={filters.projectStatus ?? ''}
+              onChange={(event) =>
+                updateFilter(
+                  'projectStatus',
+                  event.target.value,
+                )
+              }
+              style={{
+                width: '100%',
+                padding: '9px 10px',
+                borderRadius: '8px',
+                border:
+                  '1px solid var(--border-color, #d9dee7)',
+                background:
+                  'var(--card-background, #ffffff)',
+              }}
+            >
+              <option value="">All statuses</option>
+
+              {filterOptions.projectStatuses.map(
+                (status) => (
+                  <option
+                    key={status}
+                    value={status}
+                  >
+                    {status}
+                  </option>
+                ),
+              )}
+            </select>
+          </label>
+
+          <label
+            style={{
+              display: 'flex',
+              flexDirection: 'column',
+              gap: '6px',
+            }}
+          >
+            <span
+              style={{
+                fontSize: '0.8rem',
+                fontWeight: 600,
+              }}
+            >
+              Project Priority
+            </span>
+
+            <select
+              value={filters.projectPriority ?? ''}
+              onChange={(event) =>
+                updateFilter(
+                  'projectPriority',
+                  event.target.value,
+                )
+              }
+              style={{
+                width: '100%',
+                padding: '9px 10px',
+                borderRadius: '8px',
+                border:
+                  '1px solid var(--border-color, #d9dee7)',
+                background:
+                  'var(--card-background, #ffffff)',
+              }}
+            >
+              <option value="">All priorities</option>
+
+              {filterOptions.projectPriorities.map(
+                (priority) => (
+                  <option
+                    key={priority}
+                    value={priority}
+                  >
+                    {priority}
+                  </option>
+                ),
+              )}
+            </select>
+          </label>
+
+          <label
+            style={{
+              display: 'flex',
+              flexDirection: 'column',
+              gap: '6px',
+            }}
+          >
+            <span
+              style={{
+                fontSize: '0.8rem',
+                fontWeight: 600,
+              }}
+            >
+              Allocation Status
+            </span>
+
+            <select
+              value={filters.allocationStatus ?? ''}
+              onChange={(event) =>
+                updateFilter(
+                  'allocationStatus',
+                  event.target.value,
+                )
+              }
+              style={{
+                width: '100%',
+                padding: '9px 10px',
+                borderRadius: '8px',
+                border:
+                  '1px solid var(--border-color, #d9dee7)',
+                background:
+                  'var(--card-background, #ffffff)',
+              }}
+            >
+              <option value="">All allocation statuses</option>
+
+              {filterOptions.allocationStatuses.map(
+                (status) => (
+                  <option
+                    key={status}
+                    value={status}
+                  >
+                    {status}
+                  </option>
+                ),
+              )}
+            </select>
+          </label>
+        </div>
+
+        {hasActiveFilters && (
+          <div
+            style={{
+              marginTop: '14px',
+              fontSize: '0.8rem',
+              opacity: 0.72,
+            }}
+          >
+            Showing filtered utilization and capacity
+            results.
+          </div>
+        )}
       </div>
 
       <div className="analytics-detail-kpi-grid">
