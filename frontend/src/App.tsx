@@ -5,8 +5,10 @@ import {
 } from 'react-router-dom'
 
 import { AuthProvider } from './auth/AuthContext.tsx'
+import ProtectedRoute from './auth/ProtectedRoute'
 import AppLayout from './layouts/AppLayout'
 import AnalyticsPage from './pages/AnalyticsPage'
+import EmployeeImportPage from './pages/EmployeeImportPage'
 import EmployeesPage from './pages/EmployeesPage'
 import HomePage from './pages/HomePage'
 import LoginPage from './pages/LoginPage'
@@ -41,30 +43,22 @@ function App() {
 
             <Route
               path="/analytics/utilization"
-              element={
-                <UtilizationDetailPage />
-              }
+              element={<UtilizationDetailPage />}
             />
 
             <Route
               path="/analytics/staffing"
-              element={
-                <StaffingDemandPage />
-              }
+              element={<StaffingDemandPage />}
             />
 
             <Route
               path="/analytics/projects"
-              element={
-                <ProjectAnalyticsPage />
-              }
+              element={<ProjectAnalyticsPage />}
             />
 
             <Route
               path="/analytics/outlook"
-              element={
-                <WorkforceOutlookPage />
-              }
+              element={<WorkforceOutlookPage />}
             />
 
             <Route
@@ -79,15 +73,20 @@ function App() {
 
             <Route
               path="/requirements"
-              element={
-                <RequirementsPage />
-              }
+              element={<RequirementsPage />}
             />
 
             <Route
               path="/recommendations"
+              element={<RecommendationsPage />}
+            />
+
+            <Route
+              path="/admin/employees/import"
               element={
-                <RecommendationsPage />
+                <ProtectedRoute requiredPermission="employee.write">
+                  <EmployeeImportPage />
+                </ProtectedRoute>
               }
             />
           </Route>

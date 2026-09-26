@@ -8,14 +8,17 @@ import { useAuth } from './useAuth'
 
 interface ProtectedRouteProps {
   children: ReactNode
+  requiredPermission?: string
 }
 
 function ProtectedRoute({
   children,
+  requiredPermission,
 }: ProtectedRouteProps) {
   const {
     isAuthenticated,
     isLoading,
+    hasPermission,
   } = useAuth()
 
   const location = useLocation()
@@ -44,6 +47,22 @@ function ProtectedRoute({
         to="/login"
         replace
         state={{
+          from: location.pathname,
+        }}
+      />
+    )
+  }
+
+  if (
+    requiredPermission &&
+    !hasPermission(requiredPermission)
+  ) {
+    return (
+      <Navigate
+        to="/"
+        replace
+        state={{
+          accessDenied: true,
           from: location.pathname,
         }}
       />

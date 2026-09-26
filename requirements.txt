@@ -6,3 +6,4 @@ pytest
 httpx
 PyJWT
 pwdlib[argon2]
+python-multipart

@@ -1,6 +1,13 @@
 from datetime import datetime, timezone
 
-from fastapi import APIRouter, Depends, HTTPException, status
+from fastapi import (
+    APIRouter,
+    Depends,
+    File,
+    HTTPException,
+    UploadFile,
+    status,
+)
 from sqlalchemy.orm import Session
 
 from app.api.dependencies import require_permission
@@ -46,6 +53,11 @@ from app.services.allocation_service import (
 
 from app.services.audit_service import (
     create_audit_event,
+)
+
+from app.services.employee_import_service import (
+    EmployeeImportValidationError,
+    import_employees_from_csv,
 )
 
 from app.services.employee_service import (
@@ -215,6 +227,68 @@ def create_new_employee(
     except ValueError as exc:
         raise HTTPException(
             status_code=status.HTTP_409_CONFLICT,
+            detail=str(exc),
+        )
+
+
+@api_router.post(
+    "/employees/import",
+)
+def import_employee_records(
+    file: UploadFile = File(...),
+    db: Session = Depends(get_db),
+    current_user=Depends(
+        require_permission("employee.write")
+    ),
+):
+    if not file.filename:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="A CSV file is required.",
+        )
+
+    if not file.filename.lower().endswith(".csv"):
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Only CSV files are supported.",
+        )
+
+    try:
+        result = import_employees_from_csv(
+            db=db,
+            file=file.file,
+            user_id=current_user.user_id,
+        )
+
+        if result.failed > 0:
+            raise HTTPException(
+                status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+                detail={
+                    "message": "Employee import validation failed.",
+                    "total_rows": result.total_rows,
+                    "imported": result.imported,
+                    "failed": result.failed,
+                    "errors": [
+                        {
+                            "row": error.row,
+                            "errors": error.errors,
+                        }
+                        for error in result.errors
+                    ],
+                },
+            )
+
+        return {
+            "message": "Employee import completed successfully.",
+            "total_rows": result.total_rows,
+            "imported": result.imported,
+            "failed": result.failed,
+            "errors": [],
+        }
+
+    except EmployeeImportValidationError as exc:
+        raise HTTPException(
+            status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
             detail=str(exc),
         )
 
