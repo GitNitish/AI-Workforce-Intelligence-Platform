@@ -5,7 +5,6 @@ import {
 } from 'react-router-dom'
 
 import { AuthProvider } from './auth/AuthContext.tsx'
-import ProtectedRoute from './auth/ProtectedRoute'
 import AppLayout from './layouts/AppLayout'
 import AnalyticsPage from './pages/AnalyticsPage'
 import EmployeesPage from './pages/EmployeesPage'
@@ -29,13 +28,7 @@ function App() {
             element={<LoginPage />}
           />
 
-          <Route
-            element={
-              <ProtectedRoute>
-                <AppLayout />
-              </ProtectedRoute>
-            }
-          >
+          <Route element={<AppLayout />}>
             <Route
               path="/"
               element={<HomePage />}
