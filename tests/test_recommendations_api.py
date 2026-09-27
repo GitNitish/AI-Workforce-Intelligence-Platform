@@ -80,7 +80,16 @@ def test_generate_recommendations_returns_success_response(
     generated_at = datetime.now(timezone.utc)
 
     employee = SimpleNamespace(
-        employee_id="employee-001"
+        employee_id="employee-001",
+        employee_code="EMP001",
+        name="Test Employee",
+        designation="Data Analyst",
+        department="Analytics",
+        experience_years=4.0,
+        availability_status="available",
+        utilization_percentage=80.0,
+        location="Delhi",
+        status="active",
     )
 
     recommendation = SimpleNamespace(
@@ -133,13 +142,25 @@ def test_generate_recommendations_returns_success_response(
     item = data["recommendations"][0]
 
     assert item["employee_id"] == "employee-001"
+    assert item["employee_code"] == "EMP001"
+    assert item["employee_name"] == "Test Employee"
+    assert item["designation"] == "Data Analyst"
+    assert item["department"] == "Analytics"
+    assert item["experience_years"] == 4.0
+    assert item["availability_status"] == "available"
+    assert item["utilization_percentage"] == 80.0
+    assert item["location"] == "Delhi"
+    assert item["status"] == "active"
+
     assert item["rank"] == 1
     assert item["score"] == 87.5
     assert item["eligibility_status"] == "eligible"
+
     assert item["matched_skills"] == [
         "Python",
         "SQL",
     ]
+
     assert "All required skills matched" in item["reason"]
 
 

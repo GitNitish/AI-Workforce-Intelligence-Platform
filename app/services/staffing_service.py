@@ -21,6 +21,19 @@ def get_project(
     return db.get(Project, project_id)
 
 
+def get_all_staffing_requirements(
+    db: Session,
+) -> list[StaffingRequirement]:
+    statement = (
+        select(StaffingRequirement)
+        .order_by(
+            StaffingRequirement.created_at.desc()
+        )
+    )
+
+    return list(db.scalars(statement).all())
+
+
 def get_staffing_requirements(
     db: Session,
     project_id: str,
@@ -55,75 +68,61 @@ def _set_required_skills(
     requirement: StaffingRequirement,
     skill_ids: list[str],
 ) -> None:
-    unique_skill_ids = list(dict.fromkeys(skill_ids))
+    db.execute(
+        delete(StaffingRequirementSkill).where(
+            StaffingRequirementSkill.staffing_requirement_id
+            == requirement.staffing_requirement_id
+        )
+    )
 
-    if unique_skill_ids:
-        skills = list(
-            db.scalars(
-                select(Skill).where(
-                    Skill.skill_id.in_(unique_skill_ids)
-                )
-            ).all()
+    if not skill_ids:
+        return
+
+    skills = list(
+        db.scalars(
+            select(Skill).where(
+                Skill.skill_id.in_(skill_ids)
+            )
+        ).all()
+    )
+
+    if len(skills) != len(set(skill_ids)):
+        raise ValueError(
+            "One or more required skills were not found"
         )
 
-        found_skill_ids = {
-            skill.skill_id
-            for skill in skills
-        }
-
-        missing_skill_ids = [
-            skill_id
-            for skill_id in unique_skill_ids
-            if skill_id not in found_skill_ids
-        ]
-
-        if missing_skill_ids:
-            raise ValueError(
-                "Skill not found: "
-                + ", ".join(missing_skill_ids)
-            )
-
-    if requirement.staffing_requirement_id:
-        db.execute(
-            delete(StaffingRequirementSkill).where(
-                StaffingRequirementSkill.staffing_requirement_id
-                == requirement.staffing_requirement_id
+    for skill in skills:
+        db.add(
+            StaffingRequirementSkill(
+                staffing_requirement_id=(
+                    requirement.staffing_requirement_id
+                ),
+                skill_id=skill.skill_id,
             )
         )
-        db.flush()
-
-    requirement.required_skills = [
-        StaffingRequirementSkill(
-            skill_id=skill_id
-        )
-        for skill_id in unique_skill_ids
-    ]
 
 
 def _set_required_certifications(
     db: Session,
     requirement: StaffingRequirement,
-    certification_names: list[str],
+    certifications: list[str],
 ) -> None:
-    unique_certification_names = list(
-        dict.fromkeys(certification_names)
+    db.execute(
+        delete(StaffingRequirementCertification).where(
+            StaffingRequirementCertification.staffing_requirement_id
+            == requirement.staffing_requirement_id
+        )
     )
 
-    if requirement.staffing_requirement_id:
-        db.execute(
-            delete(StaffingRequirementCertification).where(
-                StaffingRequirementCertification.staffing_requirement_id
-                == requirement.staffing_requirement_id
+    for certification in certifications:
+        db.add(
+            StaffingRequirementCertification(
+                staffing_requirement_id=(
+                    requirement.staffing_requirement_id
+                ),
+                certification_name=certification,
             )
         )
-        db.flush()
-
-    requirement.required_certifications = [
-        StaffingRequirementCertification(
-            certification_name=certification_name
-        )
-        for certification_name in unique_certification_names
-    ]
 
 
 def create_staffing_requirement(
@@ -140,7 +139,9 @@ def create_staffing_requirement(
         project_id=project_id,
         role_name=requirement_data.role_name,
         required_quantity=requirement_data.required_quantity,
-        required_experience=requirement_data.required_experience,
+        required_experience=(
+            requirement_data.required_experience
+        ),
         required_proficiency=(
             requirement_data.required_proficiency
         ),
@@ -149,6 +150,9 @@ def create_staffing_requirement(
         priority=requirement_data.priority,
         status=requirement_data.status,
     )
+
+    db.add(requirement)
+    db.flush()
 
     _set_required_skills(
         db,
@@ -162,9 +166,7 @@ def create_staffing_requirement(
         requirement_data.required_certifications,
     )
 
-    db.add(requirement)
-    db.commit()
-    db.refresh(requirement)
+    db.flush()
 
     return requirement
 
@@ -186,26 +188,6 @@ def update_staffing_requirement(
         exclude_unset=True
     )
 
-    new_start_date = update_data.get(
-        "start_date",
-        requirement.start_date,
-    )
-
-    new_end_date = update_data.get(
-        "end_date",
-        requirement.end_date,
-    )
-
-    if (
-        new_start_date is not None
-        and new_end_date is not None
-        and new_end_date < new_start_date
-    ):
-        raise ValueError(
-            "end_date must be greater than "
-            "or equal to start_date"
-        )
-
     required_skill_ids = update_data.pop(
         "required_skill_ids",
         None,
@@ -217,11 +199,7 @@ def update_staffing_requirement(
     )
 
     for field, value in update_data.items():
-        setattr(
-            requirement,
-            field,
-            value,
-        )
+        setattr(requirement, field, value)
 
     if required_skill_ids is not None:
         _set_required_skills(
@@ -237,7 +215,6 @@ def update_staffing_requirement(
             required_certifications,
         )
 
-    db.commit()
-    db.refresh(requirement)
+    db.flush()
 
     return requirement

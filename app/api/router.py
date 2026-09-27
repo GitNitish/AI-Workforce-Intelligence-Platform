@@ -110,6 +110,9 @@ api_router = APIRouter()
 )
 def list_employees(
     db: Session = Depends(get_db),
+    current_user=Depends(
+        require_permission("employee.read")
+    ),
 ):
     return get_employees(db)
 
@@ -129,6 +132,9 @@ def search_employee_records(
     max_utilization: float | None = None,
     status: str | None = None,
     db: Session = Depends(get_db),
+    current_user=Depends(
+        require_permission("employee.read")
+    ),
 ):
     return search_employees(
         db=db,
@@ -198,6 +204,9 @@ def export_employee_records(
 def read_employee(
     employee_id: str,
     db: Session = Depends(get_db),
+    current_user=Depends(
+        require_permission("employee.read")
+    ),
 ):
     employee = get_employee(
         db,
@@ -219,6 +228,9 @@ def read_employee(
 def read_employee_utilization(
     employee_id: str,
     db: Session = Depends(get_db),
+    current_user=Depends(
+        require_permission("employee.read")
+    ),
 ):
     try:
         utilization = calculate_employee_utilization(
@@ -840,6 +852,19 @@ def generate_staffing_recommendations(
                     employee_id=(
                         recommendation.employee_id
                     ),
+                    employee_code=employee.employee_code,
+                    employee_name=employee.name,
+                    designation=employee.designation,
+                    department=employee.department,
+                    experience_years=employee.experience_years,
+                    availability_status=(
+                        employee.availability_status
+                    ),
+                    utilization_percentage=(
+                        employee.utilization_percentage
+                    ),
+                    location=employee.location,
+                    status=employee.status,
                     rank=recommendation.rank,
                     score=recommendation.score,
                     eligibility_status=(
