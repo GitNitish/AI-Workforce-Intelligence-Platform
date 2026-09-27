@@ -110,9 +110,6 @@ api_router = APIRouter()
 )
 def list_employees(
     db: Session = Depends(get_db),
-    current_user=Depends(
-        require_permission("employee.read")
-    ),
 ):
     return get_employees(db)
 
@@ -132,9 +129,6 @@ def search_employee_records(
     max_utilization: float | None = None,
     status: str | None = None,
     db: Session = Depends(get_db),
-    current_user=Depends(
-        require_permission("employee.read")
-    ),
 ):
     return search_employees(
         db=db,
@@ -204,9 +198,6 @@ def export_employee_records(
 def read_employee(
     employee_id: str,
     db: Session = Depends(get_db),
-    current_user=Depends(
-        require_permission("employee.read")
-    ),
 ):
     employee = get_employee(
         db,
@@ -228,9 +219,6 @@ def read_employee(
 def read_employee_utilization(
     employee_id: str,
     db: Session = Depends(get_db),
-    current_user=Depends(
-        require_permission("employee.read")
-    ),
 ):
     try:
         utilization = calculate_employee_utilization(
@@ -793,9 +781,6 @@ def update_existing_staffing_requirement(
 def generate_staffing_recommendations(
     recommendation_request: RecommendationRequest,
     db: Session = Depends(get_db),
-    current_user=Depends(
-        require_permission("recommendation.generate")
-    ),
 ):
     try:
         recommendations = generate_recommendations(

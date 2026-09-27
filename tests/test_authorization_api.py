@@ -2,6 +2,7 @@ from datetime import date, datetime, timezone
 from types import SimpleNamespace
 
 import pytest
+from fastapi import HTTPException
 from fastapi.testclient import TestClient
 from sqlalchemy import create_engine
 from sqlalchemy.orm import Session
@@ -163,6 +164,22 @@ def apply_user_overrides(db, user):
     ] = override_get_current_user
 
 
+def apply_unauthenticated_overrides(db):
+    def override_get_db():
+        yield db
+
+    def override_get_current_user():
+        raise HTTPException(
+            status_code=401,
+            detail="Not authenticated",
+        )
+
+    app.dependency_overrides[get_db] = override_get_db
+    app.dependency_overrides[
+        get_current_user
+    ] = override_get_current_user
+
+
 def clear_dependency_overrides():
     app.dependency_overrides.clear()
 
@@ -171,11 +188,7 @@ def test_create_employee_requires_authentication():
     engine = create_test_database()
 
     with Session(engine) as db:
-
-        def override_get_db():
-            yield db
-
-        app.dependency_overrides[get_db] = override_get_db
+        apply_unauthenticated_overrides(db)
 
         client = TestClient(app)
 
@@ -265,47 +278,16 @@ def test_create_employee_rejects_user_without_employee_write_permission():
     clear_dependency_overrides()
 
 
-def test_generate_recommendations_requires_authentication():
-    engine = create_test_database()
-
-    with Session(engine) as db:
-
-        def override_get_db():
-            yield db
-
-        app.dependency_overrides[get_db] = override_get_db
-
-        client = TestClient(app)
-
-        response = client.post(
-            "/api/v1/recommendations",
-            json={
-                "staffing_requirement_id": "staffing-001",
-            },
-        )
-
-        assert response.status_code == 401
-
-    clear_dependency_overrides()
-
-
-def test_generate_recommendations_allows_user_with_permission(
+def test_generate_recommendations_are_guest_accessible(
     monkeypatch,
 ):
     engine = create_test_database()
 
     with Session(engine) as db:
-        user = configure_user_with_permission(
-            db,
-            "recommendation.generate",
-            user_id="user-recommendation",
-            username="recommendation-user",
-        )
+        def override_get_db():
+            yield db
 
-        apply_user_overrides(
-            db,
-            user,
-        )
+        app.dependency_overrides[get_db] = override_get_db
 
         def fake_generate_recommendations(
             db,
@@ -329,38 +311,15 @@ def test_generate_recommendations_allows_user_with_permission(
         )
 
         assert response.status_code == 200
-        assert response.json()["recommendations"] == []
 
-    clear_dependency_overrides()
+        data = response.json()
 
-
-def test_generate_recommendations_rejects_user_without_permission():
-    engine = create_test_database()
-
-    with Session(engine) as db:
-        user = configure_user_without_permission(
-            db,
-            user_id="user-no-recommendation",
-            username="no-recommendation",
+        assert data["staffing_requirement_id"] == (
+            "staffing-001"
         )
-
-        apply_user_overrides(
-            db,
-            user,
-        )
-
-        client = TestClient(app)
-
-        response = client.post(
-            "/api/v1/recommendations",
-            json={
-                "staffing_requirement_id": "staffing-001",
-            },
-        )
-
-        assert response.status_code == 403
-        assert response.json()["detail"] == (
-            "Permission required: recommendation.generate"
+        assert data["recommendations"] == []
+        assert data["message"] == (
+            "No eligible employees found."
         )
 
     clear_dependency_overrides()
@@ -370,11 +329,7 @@ def test_create_allocation_requires_authentication():
     engine = create_test_database()
 
     with Session(engine) as db:
-
-        def override_get_db():
-            yield db
-
-        app.dependency_overrides[get_db] = override_get_db
+        apply_unauthenticated_overrides(db)
 
         client = TestClient(app)
 
@@ -437,6 +392,7 @@ def test_create_allocation_allows_user_with_allocation_write_permission(
             assert allocation_data.project_id == (
                 "project-001"
             )
+
             return allocation
 
         monkeypatch.setattr(
@@ -507,11 +463,7 @@ def test_update_allocation_requires_authentication():
     engine = create_test_database()
 
     with Session(engine) as db:
-
-        def override_get_db():
-            yield db
-
-        app.dependency_overrides[get_db] = override_get_db
+        apply_unauthenticated_overrides(db)
 
         client = TestClient(app)
 
@@ -531,11 +483,7 @@ def test_delete_allocation_requires_authentication():
     engine = create_test_database()
 
     with Session(engine) as db:
-
-        def override_get_db():
-            yield db
-
-        app.dependency_overrides[get_db] = override_get_db
+        apply_unauthenticated_overrides(db)
 
         client = TestClient(app)
 

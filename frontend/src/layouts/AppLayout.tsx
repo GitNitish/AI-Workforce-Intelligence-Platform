@@ -28,8 +28,9 @@ function AppLayout() {
   const [isUserMenuOpen, setIsUserMenuOpen] =
     useState(false)
 
-  const username = user?.username ?? 'User'
-  const role = user?.role ?? 'Workspace'
+  const isAdmin = user?.role?.toLowerCase() === 'admin'
+  const username = user?.username ?? 'Guest'
+  const role = user?.role ?? 'Guest'
   const userInitial = getUserInitial(username)
 
   function handleLogout(): void {
@@ -102,7 +103,11 @@ function AppLayout() {
                 className="user-context-button"
                 aria-expanded={isUserMenuOpen}
                 aria-haspopup="menu"
-                aria-label={`Account menu for ${username}`}
+                aria-label={
+                  user
+                    ? `Account menu for ${username}`
+                    : 'Guest account'
+                }
                 onClick={() =>
                   setIsUserMenuOpen(
                     (isOpen) => !isOpen,
@@ -140,18 +145,44 @@ function AppLayout() {
                     <span>{role}</span>
                   </div>
 
-                  <button
-                    type="button"
-                    className="user-menu-item"
-                    role="menuitem"
-                    onClick={handleLogout}
-                  >
-                    <span aria-hidden="true">
-                      ↪
-                    </span>
+                  {user ? (
+                    <button
+                      type="button"
+                      className="user-menu-item"
+                      role="menuitem"
+                      onClick={handleLogout}
+                    >
+                      <span aria-hidden="true">
+                        ↪
+                      </span>
 
-                    <span>Logout</span>
-                  </button>
+                      <span>Logout</span>
+                    </button>
+                  ) : (
+                    <button
+                      type="button"
+                      className="user-menu-item"
+                      role="menuitem"
+                      onClick={() => {
+                        setIsUserMenuOpen(false)
+                        navigate('/login')
+                      }}
+                    >
+                      <span aria-hidden="true">
+                        →
+                      </span>
+
+                      <span>Admin Login</span>
+                    </button>
+                  )}
+
+                  {isAdmin && (
+                    <div className="user-menu-header">
+                      <span>
+                        Administrator access enabled
+                      </span>
+                    </div>
+                  )}
                 </div>
               )}
             </div>
