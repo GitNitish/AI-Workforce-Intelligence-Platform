@@ -232,51 +232,21 @@ function calculateWorkforceOutlook(
   allocations: Allocation[],
   staffingRequirements: StaffingRequirement[],
 ): WorkforceOutlookAnalytics {
-  const totalCapacity = employees.length * 100
+  // Workforce outlook percentages are normalized across the whole workforce.
+  // One hundred percent represents the full workforce capacity, regardless of
+  // how many employees are in the dataset.
+  const totalCapacity = 100
 
   const today = new Date()
   const currentMonth = startOfMonth(today)
 
-  const datedAllocationEnds = allocations
-    .map((allocation) =>
-      allocation.end_date
-        ? parseDate(allocation.end_date)
-        : null,
-    )
-    .filter(
-      (date): date is Date => date !== null,
-    )
-
-  const datedRequirementEnds = staffingRequirements
-    .map((requirement) =>
-      requirement.end_date
-        ? parseDate(requirement.end_date)
-        : null,
-    )
-    .filter(
-      (date): date is Date => date !== null,
-    )
-
-  const datedProjectedEnds = [
-    ...datedAllocationEnds,
-    ...datedRequirementEnds,
-  ]
-
-  const latestKnownEnd =
-    datedProjectedEnds.length > 0
-      ? new Date(
-          Math.max(
-            ...datedProjectedEnds.map((date) =>
-              date.getTime(),
-            ),
-          ),
-        )
-      : currentMonth
+  const OUTLOOK_MONTHS = 4
 
   const outlookEnd = endOfMonth(
-    latestKnownEnd > currentMonth
-      ? latestKnownEnd
-      : currentMonth,
+    addMonths(
+      currentMonth,
+      OUTLOOK_MONTHS - 1,
+    ),
   )
 
   const monthlyOutlook: WorkforceOutlookItem[] = []
@@ -286,7 +256,7 @@ function calculateWorkforceOutlook(
   while (monthStart <= outlookEnd) {
     const monthEnd = endOfMonth(monthStart)
 
-    const committedAllocation = allocations
+    const committedAllocationUnits = allocations
       .filter(
         (allocation) =>
           normalizeValue(allocation.status) ===
@@ -305,6 +275,16 @@ function calculateWorkforceOutlook(
           total + allocation.allocation_percentage,
         0,
       )
+
+    // Allocation percentages are employee-level capacity units
+    // (e.g. 100% for one fully allocated employee). Convert the
+    // aggregate into a percentage of the entire workforce.
+    const committedAllocation =
+      employees.length > 0
+        ? (committedAllocationUnits /
+            (employees.length * 100)) *
+          100
+        : 0
 
     const availableCapacity = Math.max(
       0,

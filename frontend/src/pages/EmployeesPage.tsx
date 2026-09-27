@@ -6,6 +6,10 @@ import {
   getEmployeeUtilization,
 } from '../services/employeeDetails'
 import { getEmployees } from '../services/employees'
+import {
+  API_BASE_URL,
+  getStoredAccessToken,
+} from '../services/api'
 
 function formatPercentage(value: number): string {
   return `${value.toFixed(1)}%`
@@ -20,6 +24,7 @@ function EmployeesPage() {
     useState<EmployeeUtilization | null>(null)
   const [loadingEmployees, setLoadingEmployees] = useState(true)
   const [loadingDetails, setLoadingDetails] = useState(false)
+  const [exporting, setExporting] = useState(false)
   const [error, setError] = useState<string | null>(null)
 
   useEffect(() => {
@@ -114,6 +119,92 @@ function EmployeesPage() {
       averageUtilization,
     }
   }, [employees])
+
+  async function handleExportEmployees() {
+    try {
+      setExporting(true)
+      setError(null)
+
+      const accessToken = getStoredAccessToken()
+
+      if (!accessToken) {
+        throw new Error(
+          'You must be authenticated to export employee data.',
+        )
+      }
+
+      const response = await fetch(
+        `${API_BASE_URL}/employees/export?dataset=all`,
+        {
+          method: 'GET',
+          headers: {
+            Authorization: `Bearer ${accessToken}`,
+          },
+        },
+      )
+
+      if (!response.ok) {
+        let detail = `Export failed with status ${response.status}.`
+
+        try {
+          const errorBody = (await response.json()) as {
+            detail?: string
+          }
+
+          if (errorBody.detail) {
+            detail = errorBody.detail
+          }
+        } catch {
+          // Keep the default export error when the response
+          // does not contain a JSON error body.
+        }
+
+        throw new Error(detail)
+      }
+
+      const blob = await response.blob()
+
+      if (blob.size === 0) {
+        throw new Error(
+          'The export completed but returned an empty file.',
+        )
+      }
+
+      const contentDisposition =
+        response.headers.get('Content-Disposition')
+
+      let filename = 'workforceiq_employees.csv'
+
+      const filenameMatch =
+        contentDisposition?.match(
+          /filename="?([^"]+)"?/i,
+        )
+
+      if (filenameMatch?.[1]) {
+        filename = filenameMatch[1]
+      }
+
+      const downloadUrl = URL.createObjectURL(blob)
+      const link = document.createElement('a')
+
+      link.href = downloadUrl
+      link.download = filename
+      document.body.appendChild(link)
+      link.click()
+      link.remove()
+
+      URL.revokeObjectURL(downloadUrl)
+    } catch (requestError) {
+      const message =
+        requestError instanceof Error
+          ? requestError.message
+          : 'Unable to export employee data.'
+
+      setError(message)
+    } finally {
+      setExporting(false)
+    }
+  }
 
   if (loadingEmployees) {
     return (
@@ -301,30 +392,68 @@ function EmployeesPage() {
               </p>
             </div>
 
-            <div className="employee-selector">
-              <label htmlFor="employee-select">
-                Selected employee
-              </label>
-
-              <select
-                id="employee-select"
-                value={selectedEmployeeId}
-                onChange={(event) =>
-                  setSelectedEmployeeId(
-                    event.target.value,
-                  )
-                }
+            <div
+              style={{
+                display: 'flex',
+                alignItems: 'flex-end',
+                gap: '12px',
+                flexWrap: 'wrap',
+              }}
+            >
+              <button
+                type="button"
+                onClick={() => {
+                  void handleExportEmployees()
+                }}
+                disabled={exporting}
+                style={{
+                  border: '1px solid #2563eb',
+                  borderRadius: '6px',
+                  background: exporting
+                    ? '#dbeafe'
+                    : '#2563eb',
+                  color: exporting
+                    ? '#1d4ed8'
+                    : '#ffffff',
+                  cursor: exporting
+                    ? 'not-allowed'
+                    : 'pointer',
+                  fontSize: '11px',
+                  fontWeight: 700,
+                  padding: '9px 14px',
+                  whiteSpace: 'nowrap',
+                }}
               >
-                {employees.map((employee) => (
-                  <option
-                    key={employee.employee_id}
-                    value={employee.employee_id}
-                  >
-                    {employee.employee_code} —{' '}
-                    {employee.name}
-                  </option>
-                ))}
-              </select>
+                {exporting
+                  ? 'Exporting...'
+                  : 'Export CSV'}
+              </button>
+
+              <div className="employee-selector">
+                <label htmlFor="employee-select">
+                  Selected employee
+                </label>
+
+                <select
+                  id="employee-select"
+                  value={selectedEmployeeId}
+                  onChange={(event) =>
+                    setSelectedEmployeeId(
+                      event.target.value,
+                    )
+                  }
+                >
+                  {employees.map((employee) => (
+                    <option
+                      key={employee.employee_id}
+                      value={employee.employee_id}
+                    >
+                      {employee.employee_code} —{' '}
+                      {employee.name}
+                    </option>
+                  ))}
+                </select>
+              </div>
             </div>
           </div>
 

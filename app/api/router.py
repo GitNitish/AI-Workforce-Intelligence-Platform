@@ -8,6 +8,7 @@ from fastapi import (
     UploadFile,
     status,
 )
+from fastapi.responses import StreamingResponse
 from sqlalchemy.orm import Session
 
 from app.api.dependencies import require_permission
@@ -53,6 +54,10 @@ from app.services.allocation_service import (
 
 from app.services.audit_service import (
     create_audit_event,
+)
+
+from app.services.employee_export_service import (
+    generate_employee_csv,
 )
 
 from app.services.employee_import_service import (
@@ -136,6 +141,53 @@ def search_employee_records(
         min_experience=min_experience,
         max_utilization=max_utilization,
         status=status,
+    )
+
+
+# ============================================================
+# Employee Export
+# IMPORTANT:
+# This route must remain BEFORE /employees/{employee_id}
+# ============================================================
+
+
+@api_router.get(
+    "/employees/export",
+)
+def export_employee_records(
+    dataset: str = "all",
+    db: Session = Depends(get_db),
+    current_user=Depends(
+        require_permission("employee.write")
+    ),
+):
+    try:
+        csv_content, employee_count = generate_employee_csv(
+            db=db,
+            dataset=dataset,
+        )
+
+    except ValueError as exc:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail=str(exc),
+        )
+
+    filename = (
+        f"workforceiq_employees_{dataset.strip().lower()}.csv"
+    )
+
+    headers = {
+        "Content-Disposition": (
+            f'attachment; filename="{filename}"'
+        ),
+        "X-Export-Row-Count": str(employee_count),
+    }
+
+    return StreamingResponse(
+        iter([csv_content]),
+        media_type="text/csv; charset=utf-8",
+        headers=headers,
     )
 
 

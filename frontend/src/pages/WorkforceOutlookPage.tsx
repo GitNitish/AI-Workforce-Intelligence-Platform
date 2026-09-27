@@ -311,7 +311,7 @@ function WorkforceOutlookPage() {
         <div className="analytics-detail-card">
           <span>Total Capacity</span>
           <strong>
-            {workforceOutlook.totalCapacity.toFixed(0)}%
+            {workforceOutlook.totalCapacity.toFixed(1)}%
           </strong>
         </div>
 
@@ -516,11 +516,11 @@ function WorkforceOutlookPage() {
         </div>
 
         <div className="workforce-outlook-basis">
-          <strong>Important:</strong>{' '}
-          This is a descriptive workforce view, not a forecast. The
-          displayed months are derived from current active allocations
-          and open staffing requirements. It does not predict future
-          utilization, hiring needs, or staffing outcomes.
+          <strong>Planning basis:</strong>{' '}
+          This view provides a forward-looking planning horizon based
+          on current workforce capacity, active allocations, and known
+          staffing requirements. It is not a predictive forecast and
+          does not claim to predict future hiring or staffing outcomes.
         </div>
       </div>
     </section>
