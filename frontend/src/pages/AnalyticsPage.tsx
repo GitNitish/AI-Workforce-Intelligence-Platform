@@ -186,6 +186,35 @@ function AnalyticsPage() {
 
   const filtersActive = hasActiveAnalyticsFilters(filters)
 
+  /*
+   * Capacity values are stored as employee capacity units
+   * (100 units per employee), while Allocated and Available
+   * are displayed as percentages of the total workforce capacity.
+   *
+   * Example:
+   * 150 employees = 15,000 total capacity units
+   * 0 allocated = 0%
+   * 15,000 available = 100%
+   */
+  const totalCapacityPercentage =
+    totalEmployees > 0
+      ? 100
+      : 0
+
+  const allocatedCapacityPercentage =
+    capacity.totalCapacity > 0
+      ? (capacity.allocatedCapacity /
+          capacity.totalCapacity) *
+        100
+      : 0
+
+  const availableCapacityPercentage =
+    capacity.totalCapacity > 0
+      ? (capacity.availableCapacity /
+          capacity.totalCapacity) *
+        100
+      : 0
+
   return (
     <section className="analytics-page">
       <div className="analytics-header">
@@ -699,13 +728,12 @@ function AnalyticsPage() {
         <div className="analytics-kpi-card">
           <span>Bench</span>
           <strong>
-            {utilization.benchEmployees}
-          </strong>
-          <small>
             {formatPercentage(
               utilization.benchPercentage,
-            )}{' '}
-            of filtered workforce
+            )}
+          </strong>
+          <small>
+            {utilization.benchEmployees} employees
           </small>
         </div>
 
@@ -778,21 +806,21 @@ function AnalyticsPage() {
             <div>
               <span>Total Capacity</span>
               <strong>
-                {capacity.totalCapacity.toFixed(0)}%
+                {totalCapacityPercentage.toFixed(0)}%
               </strong>
             </div>
 
             <div>
               <span>Allocated</span>
               <strong>
-                {capacity.allocatedCapacity.toFixed(0)}%
+                {allocatedCapacityPercentage.toFixed(1)}%
               </strong>
             </div>
 
             <div>
               <span>Available</span>
               <strong>
-                {capacity.availableCapacity.toFixed(0)}%
+                {availableCapacityPercentage.toFixed(1)}%
               </strong>
             </div>
           </div>
@@ -878,6 +906,7 @@ function AnalyticsPage() {
                     <span>
                       {project.projectName}
                     </span>
+
                     <strong>
                       {project.allocationShare.toFixed(0)}%
                     </strong>

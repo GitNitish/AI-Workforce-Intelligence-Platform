@@ -46,7 +46,9 @@ function AppLayout() {
             <div className="brand-mark">W</div>
 
             <div>
-              <div className="brand-name">WorkForceIQ</div>
+              <div className="brand-name">
+                WorkForceIQ
+              </div>
 
               <div className="brand-subtitle">
                 Workforce Intelligence
@@ -147,6 +149,7 @@ function AppLayout() {
                     <span aria-hidden="true">
                       ↪
                     </span>
+
                     <span>Logout</span>
                   </button>
                 </div>
@@ -183,27 +186,6 @@ function AppLayout() {
                 <span>{item.label}</span>
               </NavLink>
             ))}
-          </div>
-
-          <div className="navigation-management">
-            <div className="nav-section-label">
-              MANAGEMENT
-            </div>
-
-            <div className="nav-link nav-link-disabled">
-              <span
-                className="nav-icon"
-                aria-hidden="true"
-              >
-                ⚙
-              </span>
-
-              <span>Administration</span>
-
-              <span className="nav-coming-soon">
-                Soon
-              </span>
-            </div>
           </div>
         </nav>
 

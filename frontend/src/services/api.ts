@@ -33,6 +33,7 @@ export async function apiRequest<T>(
   }
 
   if (
+    !(options?.body instanceof FormData) &&
     !(options?.body instanceof URLSearchParams) &&
     !headers.has('Content-Type')
   ) {

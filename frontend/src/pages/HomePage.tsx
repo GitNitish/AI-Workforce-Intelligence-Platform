@@ -132,6 +132,18 @@ function HomePage() {
 
   const totalEmployees = data.employees.length
 
+  const totalCapacity = data.capacity.totalCapacity
+
+  const allocatedCapacityPercentage =
+    totalCapacity > 0
+      ? (data.capacity.allocatedCapacity / totalCapacity) * 100
+      : 0
+
+  const availableCapacityPercentage =
+    totalCapacity > 0
+      ? (data.capacity.availableCapacity / totalCapacity) * 100
+      : 0
+
   const allocatedEmployees =
     data.employeeUtilization.filter(
       (employee) =>
@@ -300,10 +312,7 @@ function HomePage() {
           <div>
             <span>Allocated Capacity</span>
             <strong>
-              {data.capacity.allocatedCapacity.toFixed(
-                0,
-              )}
-              %
+              {allocatedCapacityPercentage.toFixed(1)}%
             </strong>
             <small>
               {formatPercentage(
@@ -322,10 +331,7 @@ function HomePage() {
           <div>
             <span>Available Capacity</span>
             <strong>
-              {data.capacity.availableCapacity.toFixed(
-                0,
-              )}
-              %
+              {availableCapacityPercentage.toFixed(1)}%
             </strong>
             <small>
               {data.utilization.benchEmployees} bench
@@ -616,7 +622,10 @@ function HomePage() {
           </span>
         </Link>
 
-        <div className="quick-action green disabled">
+        <Link
+          className="quick-action green"
+          to="/admin/employees/import"
+        >
           <span className="quick-action-icon">
             ▣
           </span>
@@ -624,14 +633,14 @@ function HomePage() {
           <span>
             <strong>Manage Data</strong>
             <small>
-              Available with Sprint 7.7
+              Import workforce data
             </small>
           </span>
 
           <span className="quick-action-arrow">
             →
           </span>
-        </div>
+        </Link>
       </div>
 
       <div className="home-bottom-grid">
