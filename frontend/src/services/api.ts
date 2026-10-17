@@ -44,6 +44,7 @@ export async function apiRequest<T>(
     `${API_BASE_URL}${normalizedPath}`,
     {
       ...options,
+      credentials: options?.credentials ?? 'include',
       headers,
     },
   )

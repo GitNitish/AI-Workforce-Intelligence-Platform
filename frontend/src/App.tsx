@@ -8,6 +8,7 @@ import { AuthProvider } from './auth/AuthContext.tsx'
 import ProtectedRoute from './auth/ProtectedRoute'
 import AppLayout from './layouts/AppLayout'
 import AnalyticsPage from './pages/AnalyticsPage'
+import AssistantPage from './pages/AssistantPage'
 import EmployeeImportPage from './pages/EmployeeImportPage'
 import EmployeesPage from './pages/EmployeesPage'
 import HomePage from './pages/HomePage'
@@ -79,6 +80,11 @@ function App() {
             <Route
               path="/recommendations"
               element={<RecommendationsPage />}
+            />
+
+            <Route
+              path="/assistant"
+              element={<AssistantPage />}
             />
 
             <Route

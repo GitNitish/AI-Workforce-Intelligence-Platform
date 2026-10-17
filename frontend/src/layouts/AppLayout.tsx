@@ -15,6 +15,7 @@ const navigationItems = [
   { to: '/projects', label: 'Projects', icon: '▣' },
   { to: '/requirements', label: 'Requirements', icon: '▤' },
   { to: '/recommendations', label: 'Recommendations', icon: '✦' },
+  { to: '/assistant', label: 'Assistant', icon: '✧' },
 ]
 
 function getUserInitial(username: string): string {
@@ -92,7 +93,7 @@ function AppLayout() {
               aria-label="Notifications"
               title="Notifications"
             >
-              <span aria-hidden="true">♢</span>
+              <span aria-hidden="true">♧</span>
 
               <span className="notification-dot" />
             </button>
@@ -131,7 +132,7 @@ function AppLayout() {
                   className="user-chevron"
                   aria-hidden="true"
                 >
-                  {isUserMenuOpen ? '⌃' : '˅'}
+                  {isUserMenuOpen ? '⌃' : '⌄'}
                 </span>
               </button>
 

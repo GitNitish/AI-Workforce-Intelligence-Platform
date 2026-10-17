@@ -853,3 +853,89 @@ class AuditEvent(Base):
     user: Mapped["User | None"] = relationship(
         back_populates="audit_events"
     )
+
+
+class AssistantInquiryContext(Base):
+    __tablename__ = "assistant_inquiry_contexts"
+
+    context_id: Mapped[str] = mapped_column(
+        String(36),
+        primary_key=True,
+        default=generate_id,
+    )
+
+    owner_user_id: Mapped[str | None] = mapped_column(
+        ForeignKey("users.user_id", ondelete="CASCADE"),
+        nullable=True,
+        index=True,
+    )
+
+    guest_session_hash: Mapped[str | None] = mapped_column(
+        String(64),
+        nullable=True,
+        index=True,
+    )
+
+    question_id: Mapped[str | None] = mapped_column(
+        String(100),
+        nullable=True,
+    )
+
+    context_data: Mapped[dict] = mapped_column(
+        JSON,
+        nullable=False,
+        default=dict,
+    )
+
+    status: Mapped[str] = mapped_column(
+        String(30),
+        nullable=False,
+        default="active",
+    )
+
+    created_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True),
+        default=utc_now,
+        nullable=False,
+    )
+
+    updated_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True),
+        default=utc_now,
+        onupdate=utc_now,
+        nullable=False,
+    )
+
+    last_activity_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True),
+        default=utc_now,
+        nullable=False,
+        index=True,
+    )
+
+    expires_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True),
+        nullable=False,
+        index=True,
+    )
+
+    absolute_expires_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True),
+        nullable=False,
+    )
+
+    __table_args__ = (
+        CheckConstraint(
+            "(owner_user_id IS NOT NULL AND guest_session_hash IS NULL) "
+            "OR (owner_user_id IS NULL AND guest_session_hash IS NOT NULL)",
+            name="ck_assistant_context_exactly_one_owner",
+        ),
+        CheckConstraint(
+            "status IN ('active', 'completed', 'expired', 'reset')",
+            name="ck_assistant_context_status",
+        ),
+        CheckConstraint(
+            "expires_at <= absolute_expires_at",
+            name="ck_assistant_context_expiry_order",
+        ),
+    )

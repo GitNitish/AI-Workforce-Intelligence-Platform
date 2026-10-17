@@ -1,5 +1,7 @@
+
 from app.models.entities import (
     Allocation,
+    AssistantInquiryContext,
     AuditEvent,
     Certification,
     Employee,
@@ -16,6 +18,7 @@ from app.models.entities import (
 
 __all__ = [
     "Allocation",
+    "AssistantInquiryContext",
     "AuditEvent",
     "Certification",
     "Employee",
