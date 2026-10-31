@@ -11,7 +11,7 @@ from fastapi import (
 from fastapi.responses import StreamingResponse
 from sqlalchemy.orm import Session
 
-from app.api.dependencies import require_permission
+from app.api.dependencies import get_current_user, require_permission
 from app.database.dependencies import get_db
 
 from app.schemas.allocation import (
@@ -46,7 +46,7 @@ from app.schemas.staffing_requirement import (
 
 from app.services.allocation_service import (
     create_allocation,
-    delete_allocation,
+    deallocate_allocation,
     get_allocation,
     get_allocations,
     update_allocation,
@@ -888,6 +888,7 @@ def generate_staffing_recommendations(
 )
 def list_allocations(
     db: Session = Depends(get_db),
+    current_user=Depends(get_current_user),
 ):
     return get_allocations(db)
 
@@ -899,6 +900,7 @@ def list_allocations(
 def read_allocation(
     allocation_id: str,
     db: Session = Depends(get_db),
+    current_user=Depends(get_current_user),
 ):
     allocation = get_allocation(
         db,
@@ -927,9 +929,15 @@ def create_new_allocation(
     ),
 ):
     try:
+        trusted_allocation_data = allocation_data.model_copy(
+            update={
+                "allocated_by": current_user.user_id,
+            },
+        )
+
         allocation = create_allocation(
             db,
-            allocation_data,
+            trusted_allocation_data,
         )
 
         create_audit_event(
@@ -949,6 +957,7 @@ def create_new_allocation(
         return allocation
 
     except ValueError as exc:
+        db.rollback()
 
         if str(exc) == "Employee allocation capacity exceeded":
             raise HTTPException(
@@ -959,10 +968,20 @@ def create_new_allocation(
                 ),
             )
 
+        if "not found" in str(exc).lower():
+            raise HTTPException(
+                status_code=status.HTTP_404_NOT_FOUND,
+                detail=str(exc),
+            )
+
         raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND,
+            status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
             detail=str(exc),
         )
+
+    except Exception:
+        db.rollback()
+        raise
 
 
 @api_router.put(
@@ -1012,17 +1031,32 @@ def update_existing_allocation(
         return updated_allocation
 
     except ValueError as exc:
+        db.rollback()
+
+        if str(exc) == "Employee allocation capacity exceeded":
+            raise HTTPException(
+                status_code=status.HTTP_409_CONFLICT,
+                detail=(
+                    "ALLOCATION_CONFLICT: "
+                    "Employee allocation capacity exceeded"
+                ),
+            )
+
         raise HTTPException(
             status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
             detail=str(exc),
         )
+
+    except Exception:
+        db.rollback()
+        raise
 
 
 @api_router.delete(
     "/allocations/{allocation_id}",
     status_code=status.HTTP_204_NO_CONTENT,
 )
-def delete_existing_allocation(
+def deallocate_existing_allocation(
     allocation_id: str,
     db: Session = Depends(get_db),
     current_user=Depends(
@@ -1040,23 +1074,33 @@ def delete_existing_allocation(
             detail="Allocation not found",
         )
 
-    deleted_allocation_id = allocation.allocation_id
+    try:
+        deallocate_allocation(
+            db,
+            allocation,
+        )
 
-    delete_allocation(
-        db,
-        allocation,
-    )
+        create_audit_event(
+            db=db,
+            action="DEALLOCATE",
+            entity_type="Allocation",
+            entity_id=allocation.allocation_id,
+            result="success",
+            user_id=current_user.user_id,
+            metadata={
+                "source": "api",
+            },
+        )
 
-    create_audit_event(
-        db=db,
-        action="DELETE",
-        entity_type="Allocation",
-        entity_id=deleted_allocation_id,
-        result="success",
-        user_id=current_user.user_id,
-        metadata={
-            "source": "api",
-        },
-    )
+        db.commit()
 
-    db.commit()
+    except ValueError as exc:
+        db.rollback()
+        raise HTTPException(
+            status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+            detail=str(exc),
+        )
+
+    except Exception:
+        db.rollback()
+        raise

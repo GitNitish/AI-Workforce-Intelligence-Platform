@@ -1,3 +1,4 @@
+
 from sqlalchemy import select
 from sqlalchemy.orm import Session
 
@@ -5,7 +6,11 @@ from app.core.security import (
     create_access_token,
     verify_password,
 )
-from app.models.entities import User
+from app.models.entities import Role, User
+
+
+GUEST_USERNAME = "workforceiq_guest"
+GUEST_ROLE_NAME = "Guest"
 
 
 def authenticate_user(
@@ -46,3 +51,28 @@ def create_user_access_token(
     return create_access_token(
         user.user_id
     )
+
+
+def create_guest_access_token(
+    db: Session,
+) -> str:
+    guest_user = db.scalar(
+        select(User)
+        .join(
+            Role,
+            Role.role_id == User.role_id,
+        )
+        .where(
+            User.username == GUEST_USERNAME,
+            User.status == "active",
+            Role.role_name == GUEST_ROLE_NAME,
+            Role.status == "active",
+        )
+    )
+
+    if guest_user is None:
+        raise ValueError(
+            "Guest access is not currently available."
+        )
+
+    return create_user_access_token(guest_user)

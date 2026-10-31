@@ -1,3 +1,4 @@
+
 import type {
   CurrentUser,
   LoginResponse,
@@ -8,6 +9,25 @@ import {
   clearStoredAccessToken,
   setStoredAccessToken,
 } from './api'
+
+async function readAuthenticationError(
+  response: Response,
+  fallbackMessage: string,
+): Promise<Error> {
+  try {
+    const errorBody = (await response.json()) as {
+      detail?: string
+    }
+
+    if (errorBody.detail) {
+      return new Error(errorBody.detail)
+    }
+  } catch {
+    // Keep the fallback authentication error.
+  }
+
+  return new Error(fallbackMessage)
+}
 
 export async function login(
   username: string,
@@ -30,21 +50,38 @@ export async function login(
   )
 
   if (!response.ok) {
-    let detail = 'Invalid username or password'
+    throw await readAuthenticationError(
+      response,
+      'Invalid username or password',
+    )
+  }
 
-    try {
-      const errorBody = (await response.json()) as {
-        detail?: string
-      }
+  const tokenResponse =
+    (await response.json()) as LoginResponse
 
-      if (errorBody.detail) {
-        detail = errorBody.detail
-      }
-    } catch {
-      // Keep the default authentication error.
-    }
+  setStoredAccessToken(tokenResponse.access_token)
 
-    throw new Error(detail)
+  try {
+    return await getCurrentUser()
+  } catch (error) {
+    clearStoredAccessToken()
+    throw error
+  }
+}
+
+export async function guestLogin(): Promise<CurrentUser> {
+  const response = await fetch(
+    `${API_BASE_URL}/auth/guest`,
+    {
+      method: 'POST',
+    },
+  )
+
+  if (!response.ok) {
+    throw await readAuthenticationError(
+      response,
+      'Unable to start Guest access.',
+    )
   }
 
   const tokenResponse =

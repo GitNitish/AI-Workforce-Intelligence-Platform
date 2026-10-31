@@ -1,3 +1,4 @@
+
 import { useState } from 'react'
 import type { FormEvent } from 'react'
 import {
@@ -17,6 +18,7 @@ function LoginPage() {
     isAuthenticated,
     isLoading,
     login,
+    guestLogin,
   } = useAuth()
 
   const location = useLocation()
@@ -27,6 +29,7 @@ function LoginPage() {
   const [password, setPassword] = useState('')
   const [error, setError] = useState('')
   const [isSubmitting, setIsSubmitting] = useState(false)
+  const [isGuestSubmitting, setIsGuestSubmitting] = useState(false)
 
   if (isLoading) {
     return (
@@ -56,8 +59,22 @@ function LoginPage() {
   const destination =
     locationState?.from ?? '/'
 
-  const handleGuestAccess = () => {
-    navigate('/')
+  const handleGuestAccess = async () => {
+    setError('')
+    setIsGuestSubmitting(true)
+
+    try {
+      await guestLogin()
+      navigate(destination, { replace: true })
+    } catch (guestError) {
+      setError(
+        guestError instanceof Error
+          ? guestError.message
+          : 'Unable to start Guest access',
+      )
+    } finally {
+      setIsGuestSubmitting(false)
+    }
   }
 
   const handleSubmit = async (
@@ -242,7 +259,8 @@ function LoginPage() {
                 >
                   View dashboards, charts, workforce
                   analytics, utilization, project insights,
-                  and staffing intelligence without signing in.
+                  and staffing intelligence with read-only
+                  Guest access.
                 </p>
 
                 <div
@@ -254,6 +272,7 @@ function LoginPage() {
                   <button
                     type="button"
                     onClick={handleGuestAccess}
+                    disabled={isGuestSubmitting || isSubmitting}
                     style={{
                       width: '100%',
                       height: '44px',
@@ -268,10 +287,15 @@ function LoginPage() {
                       color: '#172554',
                       fontSize: '14px',
                       fontWeight: 600,
-                      cursor: 'pointer',
+                      cursor: isGuestSubmitting
+                        ? 'wait'
+                        : 'pointer',
+                      opacity: isGuestSubmitting ? 0.7 : 1,
                     }}
                   >
-                    Enter System
+                    {isGuestSubmitting
+                      ? 'Entering...'
+                      : 'Enter System'}
                   </button>
                 </div>
               </div>
@@ -324,6 +348,7 @@ function LoginPage() {
                       setError('')
                       setShowLoginForm(true)
                     }}
+                    disabled={isGuestSubmitting}
                     style={{
                       width: '100%',
                       height: '44px',
@@ -346,6 +371,23 @@ function LoginPage() {
                 </div>
               </div>
             </div>
+
+            {error && (
+              <div
+                role="alert"
+                style={{
+                  marginTop: '18px',
+                  padding: '10px 12px',
+                  borderRadius: '8px',
+                  background: '#fef2f2',
+                  border: '1px solid #fecaca',
+                  color: '#b91c1c',
+                  fontSize: '13px',
+                }}
+              >
+                {error}
+              </div>
+            )}
           </>
         ) : (
           <>
@@ -485,6 +527,7 @@ function LoginPage() {
                 type="submit"
                 disabled={
                   isSubmitting ||
+                  isGuestSubmitting ||
                   !username.trim() ||
                   !password
                 }

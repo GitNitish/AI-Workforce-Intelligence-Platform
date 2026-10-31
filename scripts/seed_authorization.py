@@ -1,5 +1,9 @@
+
+import secrets
+
 from sqlalchemy import select
 
+from app.core.security import hash_password
 from app.database.connection import SessionLocal
 from app.models.entities import (
     Permission,
@@ -55,6 +59,13 @@ ROLE_PERMISSIONS = {
         "allocation.read",
         "analytics.read",
     ],
+    "Guest": [
+        "employee.read",
+        "project.read",
+        "staffing.read",
+        "allocation.read",
+        "analytics.read",
+    ],
 }
 
 
@@ -63,10 +74,14 @@ ROLE_DESCRIPTIONS = {
     "Resource Manager": "Manage workforce operations, staffing, recommendations, allocations, analytics, and audit visibility",
     "Workforce Analyst": "Analyze workforce data and generate staffing recommendations",
     "Viewer": "Read-only access to workforce operational data and analytics",
+    "Guest": "Anonymous, shared, read-only access to workforce data and analytics",
 }
 
 
-ADMIN_USERNAME = "governance_admin"
+ADMIN_EMAIL = "governance.admin@workforceiq.local"
+
+GUEST_USERNAME = "workforceiq_guest"
+GUEST_EMAIL = "guest@workforceiq.local"
 
 
 def get_or_create_permission(
@@ -135,6 +150,88 @@ def ensure_role_permission(
         )
 
 
+def synchronize_guest_permissions(
+    db,
+    guest_role: Role,
+    expected_permissions: list[Permission],
+) -> None:
+    expected_permission_ids = {
+        permission.permission_id
+        for permission in expected_permissions
+    }
+
+    existing_mappings = db.scalars(
+        select(RolePermission).where(
+            RolePermission.role_id == guest_role.role_id
+        )
+    ).all()
+
+    for mapping in existing_mappings:
+        if mapping.permission_id not in expected_permission_ids:
+            db.delete(mapping)
+
+
+def get_or_create_guest_user(
+    db,
+    guest_role: Role,
+) -> User:
+    guest_user = db.scalar(
+        select(User).where(
+            User.username == GUEST_USERNAME
+        )
+    )
+
+    guest_email_user = db.scalar(
+        select(User).where(
+            User.email == GUEST_EMAIL
+        )
+    )
+
+    if (
+        guest_user is not None
+        and guest_email_user is not None
+        and guest_user.user_id != guest_email_user.user_id
+    ):
+        raise ValueError(
+            "Guest username and email belong to different users."
+        )
+
+    if guest_user is None and guest_email_user is not None:
+        raise ValueError(
+            "Guest email is already assigned to another user."
+        )
+
+    if guest_user is not None and guest_user.email != GUEST_EMAIL:
+        raise ValueError(
+            "Guest username is already assigned to another email."
+        )
+
+    if guest_user is None:
+        guest_user = User(
+            username=GUEST_USERNAME,
+            email=GUEST_EMAIL,
+            password_hash=hash_password(
+                secrets.token_urlsafe(48)
+            ),
+            role_id=guest_role.role_id,
+            status="active",
+            employee_id=None,
+        )
+        db.add(guest_user)
+    else:
+        # Rotate to a newly generated, undisclosed password.
+        # The account is intended to be accessed only through
+        # the dedicated Guest authentication endpoint.
+        guest_user.password_hash = hash_password(
+            secrets.token_urlsafe(48)
+        )
+        guest_user.role_id = guest_role.role_id
+        guest_user.status = "active"
+        guest_user.employee_id = None
+
+    return guest_user
+
+
 def seed_authorization() -> None:
     with SessionLocal() as db:
         try:
@@ -165,25 +262,61 @@ def seed_authorization() -> None:
                         permission=permissions[permission_name],
                     )
 
+            guest_role = roles["Guest"]
+            guest_role.description = ROLE_DESCRIPTIONS["Guest"]
+            guest_role.status = "active"
+
+            synchronize_guest_permissions(
+                db=db,
+                guest_role=guest_role,
+                expected_permissions=[
+                    permissions[name]
+                    for name in ROLE_PERMISSIONS["Guest"]
+                ],
+            )
+
             admin_user = db.scalar(
                 select(User).where(
-                    User.username == ADMIN_USERNAME
+                    User.email == ADMIN_EMAIL
                 )
             )
 
             if admin_user is None:
                 raise ValueError(
-                    f"Required user '{ADMIN_USERNAME}' was not found."
+                    f"Required Administrator account "
+                    f"with email '{ADMIN_EMAIL}' was not found."
                 )
 
-            admin_user.role_id = roles["Administrator"].role_id
+            if admin_user.status != "active":
+                raise ValueError(
+                    "The existing Administrator account is not active."
+                )
+
+            if admin_user.role_id != roles["Administrator"].role_id:
+                raise ValueError(
+                    "The existing account does not currently have "
+                    "the Administrator role. Refusing to change "
+                    "its role automatically."
+                )
+
+            get_or_create_guest_user(
+                db=db,
+                guest_role=guest_role,
+            )
 
             db.commit()
 
             print("Authorization seed completed successfully.")
             print(f"Permissions: {len(permissions)}")
             print(f"Roles: {len(roles)}")
-            print("Administrator role assigned to governance_admin.")
+            print(
+                f"Existing Administrator verified: {ADMIN_EMAIL}"
+            )
+            print("Guest role and shared Guest identity provisioned.")
+            print(
+                "Guest permissions: "
+                + ", ".join(ROLE_PERMISSIONS["Guest"])
+            )
 
         except Exception:
             db.rollback()

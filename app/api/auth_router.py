@@ -1,3 +1,4 @@
+
 from datetime import datetime, timezone
 
 from fastapi import APIRouter, Depends, HTTPException, status
@@ -20,6 +21,7 @@ from app.schemas.auth import (
 from app.services.audit_service import create_audit_event
 from app.services.auth_service import (
     authenticate_user,
+    create_guest_access_token,
     create_user_access_token,
 )
 
@@ -68,7 +70,7 @@ def login(
             token_type="bearer",
         )
 
-    except ValueError as exc:
+    except ValueError:
         create_audit_event(
             db=db,
             action="LOGIN",
@@ -78,7 +80,7 @@ def login(
             user_id=None,
             metadata={
                 "source": "api",
-                "reason": str(exc),
+                "reason": "Invalid username or password",
             },
         )
 
@@ -87,6 +89,28 @@ def login(
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
             detail="Invalid username or password",
+        )
+
+
+@auth_router.post(
+    "/guest",
+    response_model=TokenResponse,
+)
+def guest_login(
+    db: Session = Depends(get_db),
+):
+    try:
+        access_token = create_guest_access_token(db)
+
+        return TokenResponse(
+            access_token=access_token,
+            token_type="bearer",
+        )
+
+    except ValueError:
+        raise HTTPException(
+            status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
+            detail="Guest access is currently unavailable.",
         )
 
 

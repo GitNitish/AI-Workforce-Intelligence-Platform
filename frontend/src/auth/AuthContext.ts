@@ -1,6 +1,5 @@
-import {
-  createContext,
-} from 'react'
+
+import { createContext } from 'react'
 
 import type { CurrentUser } from '../types/auth'
 
@@ -12,6 +11,7 @@ export interface AuthContextValue {
     username: string,
     password: string,
   ) => Promise<void>
+  guestLogin: () => Promise<void>
   logout: () => void
   hasPermission: (permission: string) => boolean
 }

@@ -1,3 +1,4 @@
+
 import {
   useCallback,
   useEffect,
@@ -13,6 +14,7 @@ import {
 } from '../services/api'
 import {
   getCurrentUser,
+  guestLogin as guestLoginUser,
   login as loginUser,
   logout as logoutUser,
 } from '../services/auth'
@@ -77,6 +79,14 @@ export function AuthProvider({
     [],
   )
 
+  const guestLogin = useCallback(
+    async (): Promise<void> => {
+      const guestUser = await guestLoginUser()
+      setUser(guestUser)
+    },
+    [],
+  )
+
   const logout = useCallback((): void => {
     logoutUser()
     setUser(null)
@@ -96,10 +106,10 @@ export function AuthProvider({
   const value = useMemo<AuthContextValue>(
     () => ({
       user,
-      isAuthenticated:
-        user !== null,
+      isAuthenticated: user !== null,
       isLoading,
       login,
+      guestLogin,
       logout,
       hasPermission,
     }),
@@ -107,6 +117,7 @@ export function AuthProvider({
       user,
       isLoading,
       login,
+      guestLogin,
       logout,
       hasPermission,
     ],

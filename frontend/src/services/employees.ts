@@ -1,18 +1,13 @@
+
 import type { Employee } from '../types/employee'
-import { API_BASE_URL, getStoredAccessToken } from './api'
+import {
+  API_BASE_URL,
+  apiRequest,
+  getStoredAccessToken,
+} from './api'
 
 export async function getEmployees(): Promise<Employee[]> {
-  const response = await fetch(`${API_BASE_URL}/employees`, {
-    headers: {
-      Authorization: `Bearer ${getStoredAccessToken() ?? ''}`,
-    },
-  })
-
-  if (!response.ok) {
-    throw new Error('Unable to load employees.')
-  }
-
-  return (await response.json()) as Employee[]
+  return apiRequest<Employee[]>('/employees')
 }
 
 export interface EmployeeImportResponse {
@@ -30,12 +25,15 @@ export async function uploadEmployeeImport(
   formData.append('file', file)
 
   const accessToken = getStoredAccessToken()
+  const headers = new Headers()
+
+  if (accessToken) {
+    headers.set('Authorization', `Bearer ${accessToken}`)
+  }
 
   const response = await fetch(`${API_BASE_URL}/employees/import`, {
     method: 'POST',
-    headers: {
-      Authorization: `Bearer ${accessToken ?? ''}`,
-    },
+    headers,
     body: formData,
   })
 
@@ -71,14 +69,17 @@ export async function exportEmployees(
   dataset: EmployeeExportDataset,
 ): Promise<Blob> {
   const accessToken = getStoredAccessToken()
+  const headers = new Headers()
+
+  if (accessToken) {
+    headers.set('Authorization', `Bearer ${accessToken}`)
+  }
 
   const response = await fetch(
     `${API_BASE_URL}/employees/export?dataset=${encodeURIComponent(dataset)}`,
     {
       method: 'GET',
-      headers: {
-        Authorization: `Bearer ${accessToken ?? ''}`,
-      },
+      headers,
     },
   )
 

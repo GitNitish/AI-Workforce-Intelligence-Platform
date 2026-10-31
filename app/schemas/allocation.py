@@ -1,4 +1,5 @@
 from datetime import date, datetime
+from typing import Literal
 
 from pydantic import BaseModel, ConfigDict, Field, model_validator
 
@@ -34,7 +35,7 @@ class AllocationBase(BaseModel):
 
 
 class AllocationCreate(AllocationBase):
-    pass
+    status: Literal["active"] = "active"
 
 
 class AllocationUpdate(BaseModel):
@@ -46,7 +47,7 @@ class AllocationUpdate(BaseModel):
 
     start_date: date | None = None
     end_date: date | None = None
-    status: str | None = None
+    status: Literal["active"] | None = None
 
     @model_validator(mode="after")
     def validate_date_range(self):

@@ -1,3 +1,4 @@
+
 import {
   NavLink,
   Outlet,
@@ -56,21 +57,6 @@ function AppLayout() {
                 Workforce Intelligence
               </div>
             </div>
-          </div>
-
-          <div className="global-search">
-            <span
-              className="global-search-icon"
-              aria-hidden="true"
-            >
-              ⌕
-            </span>
-
-            <input
-              type="search"
-              placeholder="Search employees, projects, skills..."
-              aria-label="Search employees, projects and skills"
-            />
           </div>
 
           <div className="topbar-actions">
