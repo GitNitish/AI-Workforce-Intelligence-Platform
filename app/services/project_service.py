@@ -1,4 +1,4 @@
-from sqlalchemy import or_, select
+from sqlalchemy import func, or_, select
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import Session
 
@@ -180,22 +180,34 @@ def get_project_employees(
 ) -> list[Employee]:
 
     statement = (
-        select(Employee)
+        select(
+            Employee,
+            func.sum(
+                Allocation.allocation_percentage
+            ).label("project_allocation_percentage"),
+        )
         .join(
             Allocation,
             Allocation.employee_id
             == Employee.employee_id,
         )
         .where(
-            Allocation.project_id
-            == project_id,
+            Allocation.project_id == project_id,
             Allocation.status == "active",
         )
-        .order_by(
-            Employee.created_at.desc()
-        )
+        .group_by(Employee.employee_id)
+        .order_by(Employee.created_at.desc())
     )
 
-    return list(
-        db.scalars(statement).unique().all()
-    )
+    results = db.execute(statement).all()
+
+    employees = []
+
+    for employee, allocation_percentage in results:
+        employee.allocation_percentage = min(
+            float(allocation_percentage or 0),
+            100.0,
+        )
+        employees.append(employee)
+
+    return employees

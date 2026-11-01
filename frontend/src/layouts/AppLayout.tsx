@@ -10,13 +10,13 @@ import '../App.css'
 import { useAuth } from '../auth/useAuth'
 
 const navigationItems = [
-  { to: '/', label: 'Dashboard', icon: '⌂' },
-  { to: '/analytics', label: 'Analytics', icon: '▥' },
-  { to: '/employees', label: 'Employees', icon: '◉' },
-  { to: '/projects', label: 'Projects', icon: '▣' },
-  { to: '/requirements', label: 'Requirements', icon: '▤' },
-  { to: '/recommendations', label: 'Recommendations', icon: '✦' },
-  { to: '/assistant', label: 'Assistant', icon: '✧' },
+  { to: '/', label: 'Dashboard', icon: 'D' },
+  { to: '/analytics', label: 'Analytics', icon: 'A' },
+  { to: '/employees', label: 'Employees', icon: 'E' },
+  { to: '/projects', label: 'Projects', icon: 'P' },
+  { to: '/requirements', label: 'Requirements', icon: 'R' },
+  { to: '/recommendations', label: 'Recommendations', icon: 'M' },
+  { to: '/assistant', label: 'Assistant', icon: 'AI' },
 ]
 
 function getUserInitial(username: string): string {
@@ -24,13 +24,17 @@ function getUserInitial(username: string): string {
 }
 
 function AppLayout() {
-  const { user, logout } = useAuth()
+  const { user, logout, hasPermission } = useAuth()
   const navigate = useNavigate()
 
   const [isUserMenuOpen, setIsUserMenuOpen] =
     useState(false)
 
   const isAdmin = user?.role?.toLowerCase() === 'admin'
+
+  const canViewAllocations =
+    hasPermission('allocation.read')
+
   const username = user?.username ?? 'Guest'
   const role = user?.role ?? 'Guest'
   const userInitial = getUserInitial(username)
@@ -79,7 +83,12 @@ function AppLayout() {
               aria-label="Notifications"
               title="Notifications"
             >
-              <span aria-hidden="true">♧</span>
+              <span
+                className="notification-symbol"
+                aria-hidden="true"
+              >
+                N
+              </span>
 
               <span className="notification-dot" />
             </button>
@@ -118,7 +127,7 @@ function AppLayout() {
                   className="user-chevron"
                   aria-hidden="true"
                 >
-                  {isUserMenuOpen ? '⌃' : '⌄'}
+                  {isUserMenuOpen ? '-' : '+'}
                 </span>
               </button>
 
@@ -140,7 +149,7 @@ function AppLayout() {
                       onClick={handleLogout}
                     >
                       <span aria-hidden="true">
-                        ↪
+                        L
                       </span>
 
                       <span>Logout</span>
@@ -156,7 +165,7 @@ function AppLayout() {
                       }}
                     >
                       <span aria-hidden="true">
-                        →
+                        A
                       </span>
 
                       <span>Admin Login</span>
@@ -204,6 +213,24 @@ function AppLayout() {
                 <span>{item.label}</span>
               </NavLink>
             ))}
+
+            {canViewAllocations && (
+              <NavLink
+                to="/allocations"
+                className={({ isActive }) =>
+                  `nav-link${isActive ? ' active' : ''}`
+                }
+              >
+                <span
+                  className="nav-icon"
+                  aria-hidden="true"
+                >
+                  AL
+                </span>
+
+                <span>Allocations</span>
+              </NavLink>
+            )}
           </div>
         </nav>
 

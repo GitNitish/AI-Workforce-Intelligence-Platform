@@ -564,48 +564,50 @@ function ProjectsPage() {
               {!loadingEmployees &&
                 projectEmployees.length > 0 && (
                   <div className="projects-employee-list">
-                    {projectEmployees.map((employee) => (
-                      <div
-                        className="projects-employee-row"
-                        key={employee.employee_id}
-                      >
-                        <div>
-                          <strong>
-                            {employee.name}
-                          </strong>
+                    {projectEmployees.map((employee) => {
+                      const allocationPercentage =
+                        employee.allocation_percentage ?? 0
 
-                          <small>
-                            {employee.employee_code}
-                            {' • '}
-                            {employee.designation ??
-                              '—'}
-                          </small>
-                        </div>
-
-                        <div className="projects-employee-utilization">
-                          <strong>
-                            {
-                              employee.utilization_percentage
-                            }
-                            %
-                          </strong>
-
+                      return (
+                        <div
+                          className="projects-employee-row"
+                          key={employee.employee_id}
+                        >
                           <div>
-                            <span
-                              style={{
-                                width: `${Math.min(
-                                  Math.max(
-                                    employee.utilization_percentage,
-                                    0,
-                                  ),
-                                  100,
-                                )}%`,
-                              }}
-                            />
+                            <strong>
+                              {employee.name}
+                            </strong>
+
+                            <small>
+                              {employee.employee_code}
+                              {' • '}
+                              {employee.designation ??
+                                '—'}
+                            </small>
+                          </div>
+
+                          <div className="projects-employee-utilization">
+                            <strong>
+                              {allocationPercentage}%
+                            </strong>
+
+                            <div>
+                              <span
+                                style={{
+                                  width: `${Math.min(
+                                    Math.max(
+                                      allocationPercentage,
+                                      0,
+                                    ),
+                                    100,
+                                  )}%`,
+                                }}
+                              />
+                            </div>
                           </div>
                         </div>
-                      </div>
-                    ))}
+                      )
+                    })}
                   </div>
                 )}
             </div>

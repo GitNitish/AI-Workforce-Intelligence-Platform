@@ -7,6 +7,7 @@ import {
 import { AuthProvider } from './auth/AuthContext.tsx'
 import ProtectedRoute from './auth/ProtectedRoute'
 import AppLayout from './layouts/AppLayout'
+import AllocationsPage from './pages/AllocationsPage'
 import AnalyticsPage from './pages/AnalyticsPage'
 import AssistantPage from './pages/AssistantPage'
 import EmployeeImportPage from './pages/EmployeeImportPage'
@@ -65,6 +66,15 @@ function App() {
             <Route
               path="/employees"
               element={<EmployeesPage />}
+            />
+
+            <Route
+              path="/allocations"
+              element={
+                <ProtectedRoute requiredPermission="allocation.read">
+                  <AllocationsPage />
+                </ProtectedRoute>
+              }
             />
 
             <Route

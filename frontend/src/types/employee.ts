@@ -8,6 +8,7 @@ export interface Employee {
   experience_years: number
   availability_status: string
   utilization_percentage: number
+  allocation_percentage?: number | null
   location: string | null
   status: string
   created_at: string

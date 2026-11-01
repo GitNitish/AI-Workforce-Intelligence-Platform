@@ -43,6 +43,11 @@ class EmployeeResponse(EmployeeBase):
         ge=0,
         le=100,
     )
+    allocation_percentage: float | None = Field(
+        default=None,
+        ge=0,
+        le=100,
+    )
     created_at: datetime
     updated_at: datetime
 

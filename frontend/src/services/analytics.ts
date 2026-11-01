@@ -1,3 +1,4 @@
+
 import type { Employee } from '../types/employee'
 import type { Project } from '../types/project'
 import type { StaffingRequirement } from '../types/staffingRequirement'
@@ -179,6 +180,20 @@ function formatDate(date: Date): string {
   const day = String(date.getDate()).padStart(2, '0')
 
   return `${year}-${month}-${day}`
+}
+
+function isCurrentActiveAllocation(
+  allocation: Allocation,
+  today: string,
+): boolean {
+  return (
+    normalizeValue(allocation.status) === 'active' &&
+    allocation.start_date <= today &&
+    (
+      allocation.end_date === null ||
+      allocation.end_date >= today
+    )
+  )
 }
 
 function startOfMonth(date: Date): Date {
@@ -366,9 +381,11 @@ export function calculateAnalyticsData(
     staffingRequirements,
   } = data
 
+  const today = formatDate(new Date())
+
   const activeAllocations = allocations.filter(
     (allocation) =>
-      normalizeValue(allocation.status) === 'active',
+      isCurrentActiveAllocation(allocation, today),
   )
 
   const activeAllocationByEmployee = new Map<string, number>()
